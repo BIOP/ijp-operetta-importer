@@ -134,6 +134,7 @@ public class CZTRange {
                                 .boxed().collect(Collectors.toList());
                         range.addAll(subrange);
                     } else {
+                        if(sr2[0].length() > 0)
                         range.add(Integer.valueOf(sr2[0]));
                     }
                 }
@@ -144,7 +145,7 @@ public class CZTRange {
     public List<Integer> getRangeC( ) {
         return this.range_c;
     }
-    public List<Integer>  getRangeZ( ) {
+    public List<Integer> getRangeZ( ) {
         return this.range_z;
     }
     public List<Integer> getRangeT( ) {
@@ -158,17 +159,20 @@ public class CZTRange {
         List<Integer> range_t;
 
         public Builder setRangeC(String range_str) {
-            this.range_c = parseString(range_str);
+            if (range_str != null)
+                this.range_c = parseString(range_str);
             return this;
         }
 
         public Builder setRangeZ(String range_str) {
-            this.range_z = parseString(range_str);
+            if (range_str != null)
+                this.range_z = parseString(range_str);
             return this;
         }
 
         public Builder setRangeT(String range_str) {
-            this.range_t = parseString(range_str);
+            if (range_str != null)
+                this.range_t = parseString(range_str);
             return this;
         }
 

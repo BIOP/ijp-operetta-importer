@@ -68,7 +68,7 @@ public class OperettaManager {
                              double norm_max,
                              boolean is_projection,
                              int projection_type,
-                             File save_folder) {
+                             File save_folder ) {
 
         this.id = new File( reader.getCurrentFile( ) );
         this.main_reader = reader;
@@ -80,9 +80,8 @@ public class OperettaManager {
         this.is_projection = is_projection;
         this.projection_type = projection_type;
         this.save_folder = save_folder;
-        createReaders( );
-
     }
+
 
     private static IFormatReader createReader( final String id ) throws IOException, FormatException {
 
@@ -105,7 +104,7 @@ public class OperettaManager {
         OperettaManager op = new Builder( )
                 .setId( id )
                 .doProjection( true )
-                .setSaveFolder( new File("D:\\Demo") )
+                .setSaveFolder( new File( "D:\\Demo" ) )
                 .build( );
 
         StopWatch sw = new StopWatch( );
@@ -113,16 +112,54 @@ public class OperettaManager {
         //ImageStack s = op.readStack(1, 1);
         //Roi region = new Roi(1280, 3680, 5184, 2304);
         //Roi region = new Roi( 100, 100, 500, 500 );
-        op.process( 4, null, true );
+        //op.process( 4, null, true );
 
         //Roi region = null;
 
         ImageStack s = null;
         //op.updateZRange("1");
 
-        //op.getWellImage( 2, 2, 1, region ).show( );
+        op.getWellImage( 1, 1, 1 ).show( );
 
         logger.info( "Time to open one well: {}", sw.stop( ) );
+    }
+
+    public List<Integer> getAvailableWells( ) {
+        int n_wells = metadata.getWellCount( 0 );
+
+        List<Integer> availableWells = IntStream.range( 0, n_wells ).boxed( ).collect( Collectors.toList( ) );
+        /*
+                .filter( w -> metadata.getWellRow( 0, w ) != null )
+                .mapToObj( w -> {
+                    int row = metadata.getWellRow( 0, w ).getValue();
+                    int col = metadata.getWellColumn( 0, w ).getValue();
+
+                    return "R"+row+"-C"+col;
+
+                }).collect( Collectors.toList());
+        */
+        return availableWells;
+    }
+
+    public List<Integer> getAvailableFields( ) {
+        // find one well
+        int n_fields = metadata.getWellSampleCount( 0, 0 );
+
+        List<Integer> availableFields = IntStream.range( 0, n_fields ).boxed( ).collect( Collectors.toList( ) );
+
+        return availableFields;
+    }
+
+    public List<String> getAvailableFieldsString( ) {
+        // find one well
+        int n_fields = metadata.getWellSampleCount( 0, 0 );
+
+        List<String> availableFields = IntStream.range( 0, n_fields ).mapToObj( f -> {
+            String s = "Field "+f;
+            return s;
+        }).collect( Collectors.toList( ) );
+
+        return availableFields;
     }
 
     private void createReaders( ) {
@@ -167,27 +204,33 @@ public class OperettaManager {
     public ImagePlus getWellImage( int row, int column ) {
         int well_index = getWellIndex( row, column );
 
-        return makeImagePlus( readSingleWell( well_index, 1, this.range, null ), well_index );
+        return makeImagePlus( readSingleWell( well_index, null, 1, this.range, null ), well_index );
     }
-
     // All the get*Image should use readSingleStack or readSingleWell
+
     public ImagePlus getWellImage( int row, int column, int downscale ) {
         int well_index = getWellIndex( row, column );
 
-        return makeImagePlus( readSingleWell( well_index, downscale, this.range, null ), well_index );
+        return makeImagePlus( readSingleWell( well_index, null, downscale, this.range, null ), well_index );
     }
-
     // All the get*Image should use readSingleStack or readSingleWell
+
     public ImagePlus getWellImage( int row, int column, int downscale, Roi subregion ) {
         int well_index = getWellIndex( row, column );
 
-        return makeImagePlus( readSingleWell( well_index, downscale, this.range, subregion ), well_index );
+        return makeImagePlus( readSingleWell( well_index, null, downscale, this.range, subregion ), well_index );
     }
 
     public ImagePlus getWellImage( int row, int column, int downscale, CZTRange range, Roi subregion ) {
         int well_index = getWellIndex( row, column );
 
-        return makeImagePlus( readSingleWell( well_index, downscale, range, subregion ), well_index );
+        return makeImagePlus( readSingleWell( well_index, null, downscale, range, subregion ), well_index );
+    }
+
+    public ImagePlus getWellImage( int row, int column, List<Integer> field_ids, int downscale, CZTRange range, Roi subregion ) {
+        int well_index = getWellIndex( row, column );
+
+        return makeImagePlus( readSingleWell( well_index, field_ids, downscale, range, subregion ), well_index );
     }
 
     // Make Subset of what we want (including stacks if crops are happening in fields)
@@ -201,15 +244,15 @@ public class OperettaManager {
 
         return makeImagePlus( readSingleStack( well_index, field, 1, this.range, null ), well_index );
     }
-
     // All the get*Image should use readSingleStack or readSingleWell
+
     public ImagePlus getFieldImage( int row, int column, int field, int downscale ) {
         int well_index = getWellIndex( row, column );
 
         return makeImagePlus( readSingleStack( well_index, field, downscale, this.range, null ), well_index );
     }
-
     // All the get*Image should use readSingleStack or readSingleWell
+
     public ImagePlus getFieldImage( int row, int column, int field, int downscale, Roi subregion ) {
         int well_index = getWellIndex( row, column );
 
@@ -221,8 +264,8 @@ public class OperettaManager {
 
         return makeImagePlus( readSingleStack( well_index, field, downscale, range, subregion ), well_index );
     }
-
     // Make Subset of what we want (including stacks if crops are happening in fields)
+
     public ImageStack readSingleStack( int well_index, int field_index, final int downscale, CZTRange range, final Roi subregion ) {
 
         final int series_id = metadata.getWellSampleIndex( 0, well_index, field_index ).getValue( ).intValue( );
@@ -310,7 +353,7 @@ public class OperettaManager {
         return -1;
     }
 
-    public ImageStack readSingleWell( final int well_index, final int downscale, CZTRange range, final Roi bounds ) {
+    public ImageStack readSingleWell( final int well_index, List<Integer> field_ids, final int downscale, CZTRange range, final Roi bounds ) {
 
         // Need pixel coordinates...
         // Need bounds of the full image to generate the final tile and to figure out overlaps with rois if any
@@ -325,12 +368,15 @@ public class OperettaManager {
         final int n = range2.getTotalPlanes( );
 
         // Get the positions for each field (called a sample by BioFormats) in this well
-        List<FieldCoordinates> coordinates = getAllWellFieldCoordinates( well_index );
+        if ( field_ids == null ) field_ids = getAvailableFields( );
+
+        List<Integer> final_field_ids = field_ids;
+        List<FieldCoordinates> coordinates = getAllWellFieldCoordinates( well_index ).stream( ).filter( f -> final_field_ids.contains( f.getField( ) ) ).collect( Collectors.toList( ) );
 
         // Out of these coordinates, keep only those that are intersecting with an ROI
         final List<FieldCoordinates> effective_coordinates = getEffectiveFields( coordinates, bounds );
 
-        if (effective_coordinates.size() == 0 ) return null;
+        if ( effective_coordinates.size( ) == 0 ) return null;
         // Get extents for the final image
         final int minx = effective_coordinates.stream( ).min( Comparator.comparing( FieldCoordinates::getXCoordinate ) ).get( ).getCoordinates( ).x;
         final int miny = effective_coordinates.stream( ).min( Comparator.comparing( FieldCoordinates::getYCoordinate ) ).get( ).getCoordinates( ).y;
@@ -361,7 +407,8 @@ public class OperettaManager {
             // modify position of copy as needed
             if ( bounds != null )
                 pos.translate( subregion.getBounds( ).x - bounds.getBounds( ).x, subregion.getBounds( ).y - bounds.getBounds( ).y );
-            pos.setLocation( ( pos.x ) / downscale, ( pos.y ) / downscale );
+
+            pos.setLocation( ( pos.x - minx) / downscale, ( pos.y -miny) / downscale );
             logger.info( sw.lap( "Opening Stack" ) );
             if ( stack != null ) {
                 for ( int s = 0; s < stack.size( ); s++ ) {
@@ -380,7 +427,7 @@ public class OperettaManager {
     }
 
     private ImagePlus makeImagePlus( ImageStack stack, int well_index ) {
-        if (stack == null) return null;
+        if ( stack == null ) return null;
         // Get the dimensions
         int[] czt = this.range.getCZTDimensions( );
 
@@ -410,7 +457,9 @@ public class OperettaManager {
 
         String name = getFinalWellImageName( well_index );
 
-        ImagePlus result = HyperStackConverter.toHyperStack( new ImagePlus( name, stack ), czt[ 0 ], czt[ 1 ], czt[ 2 ] );
+        ImagePlus result = new ImagePlus( name, stack );
+        if ( ( czt[ 0 ] + czt[ 1 ] + czt[ 2 ] ) > 3 )
+            result = HyperStackConverter.toHyperStack( result, czt[ 0 ], czt[ 1 ], czt[ 2 ] );
 
         Calibration cal = new Calibration( result );
         cal.pixelWidth = px_size;
@@ -470,9 +519,9 @@ public class OperettaManager {
             }
         }
 
-        int s = coordinates.size();
+        int s = coordinates.size( );
         // It could be that he finds nothing
-        if (coordinates.size() == 0 ) return coordinates;
+        if ( coordinates.size( ) == 0 ) return coordinates;
 
         //Recenter all coordinates to 0
         int raw_minx = coordinates.stream( ).min( Comparator.comparing( FieldCoordinates::getXCoordinate ) ).get( ).getXCoordinate( );
@@ -517,7 +566,7 @@ public class OperettaManager {
         List<FieldCoordinates> selected = coordinates.stream( ).filter( c -> {
             if ( bounds == null ) return true;
 
-            Roi other = new Roi( c.getXCoordinate( ), c.getYCoordinate( ), c.getWidth(), c.getHeight() );
+            Roi other = new Roi( c.getXCoordinate( ), c.getYCoordinate( ), c.getWidth( ), c.getHeight( ) );
 
             return isOverlapping( bounds, other );
         } ).collect( Collectors.toList( ) );
@@ -529,7 +578,7 @@ public class OperettaManager {
         int col = metadata.getWellColumn( 0, well_index ).getValue( );
         String project = metadata.getPlateName( 0 );
 
-        String name = String.format( "%s - R%d-C%d-F%d", project, row, col, field_index+1 );
+        String name = String.format( "%s - R%d-C%d-F%d", project, row, col, field_index );
 
         if ( this.is_projection )
             name += "_Projected";
@@ -538,6 +587,7 @@ public class OperettaManager {
     }
 
     public String getFinalWellImageName( int well_index ) {
+
         int row = metadata.getWellRow( 0, well_index ).getValue( );
         int col = metadata.getWellColumn( 0, well_index ).getValue( );
         String project = metadata.getPlateName( 0 );
@@ -549,26 +599,28 @@ public class OperettaManager {
         return name;
 
     }
-
     // TODO: Format for selecting valid wells and fields
-    public void process( int downscale, Roi region, boolean is_fields_individual) {
-        process( downscale, region, is_fields_individual, null, null);
+
+    public void process( int downscale, Roi region, boolean is_fields_individual ) {
+        process( downscale, region, is_fields_individual, null, null );
     }
 
     public void process( int downscale, Roi region, boolean is_fields_individual, List<Integer> well_indexes, List<Integer> field_indexes ) {
         // Process everything
         // decide whether we process wells or fields
-        if (well_indexes == null ) {
-            well_indexes = IntStream.range( 0, metadata.getWellCount( 0 )).boxed().collect( Collectors.toList());
+        if ( well_indexes == null ) {
+            well_indexes = getAvailableWells( );
         }
 
-        for (int well: well_indexes) {
+        for ( int well : well_indexes ) {
             logger.info( "Well Index: {}", well );
-            List<FieldCoordinates> fc = getEffectiveFields( getAllWellFieldCoordinates( well ), region);
-
-            if (field_indexes == null) {
-                field_indexes = fc.stream().map( f -> f.getField() ).collect( Collectors.toList());
+            if ( field_indexes == null ) {
+                field_indexes = getAvailableFields( );
             }
+            final List<Integer> fi = field_indexes;
+            List<FieldCoordinates> fc = getEffectiveFields( getAllWellFieldCoordinates( well ), region )
+                    .stream().filter( f -> fi.contains( f.getField() ) ).collect( Collectors.toList());
+
 
             int row = metadata.getWellRow( 0, well ).getValue( );
             int col = metadata.getWellColumn( 0, well ).getValue( );
@@ -577,29 +629,29 @@ public class OperettaManager {
                 for ( int field : field_indexes ) {
                     ImagePlus field_image = getFieldImage( row, col, field, downscale, this.range, region );
                     String name = getFinalFieldImageName( well, field );
-                    if (field_image != null)
-                        IJ.saveAsTiff( field_image, new File( save_folder, name + ".tif" ).getAbsolutePath() );
+                    if ( field_image != null )
+                        IJ.saveAsTiff( field_image, new File( save_folder, name + ".tif" ).getAbsolutePath( ) );
                 }
                 // Save the positions file
                 // Get the positions that were used, just compute them again
                 try {
-                    writeWellPositionsFile( well, fc, new File(save_folder, getFinalWellImageName( well )+".txt"), downscale );
+                    writeWellPositionsFile( well, fc, new File( save_folder, getFinalWellImageName( well ) + ".txt" ), downscale );
                 } catch ( IOException e ) {
                     e.printStackTrace( );
                 }
 
             } else {
-                ImagePlus well_image = getWellImage( row, col, downscale, this.range, region );
+                ImagePlus well_image = getWellImage( row, col, field_indexes, downscale, this.range, region );
                 String name = getFinalWellImageName( well );
-                if (well_image != null)
-                    IJ.saveAsTiff( well_image, new File( save_folder, name + ".tif" ).getAbsolutePath() );
+                if ( well_image != null )
+                    IJ.saveAsTiff( well_image, new File( save_folder, name + ".tif" ).getAbsolutePath( ) );
             }
         }
 
     }
 
     public void writeWellPositionsFile( int well_index, List<FieldCoordinates> fc, File position_file, int downscale ) throws IOException {
-        int dim = range.getRangeZ().size( ) > 1 && !is_projection ? 3 : 2;
+        int dim = range.getRangeZ( ).size( ) > 1 && !is_projection ? 3 : 2;
 
         String z = dim == 3 ? ", 0.0" : "";
 
@@ -628,6 +680,24 @@ public class OperettaManager {
         return "Operetta Reader on File " + this.id.getName( );
     }
 
+    public IMetadata getMetadata( ) {
+        return this.metadata;
+    }
+
+    public List<String> getAvailableWellsString( ) {
+        List<String> availableWells = IntStream.range( 0, metadata.getWellCount( 0 ) )
+                .filter( w -> metadata.getWellRow( 0, w ) != null )
+                .mapToObj( w -> {
+                    int row = metadata.getWellRow( 0, w ).getValue( );
+                    int col = metadata.getWellColumn( 0, w ).getValue( );
+
+                    return "R" + row + "-C" + col;
+
+                } ).collect( Collectors.toList( ) );
+        return availableWells;
+
+    }
+
     public static class Builder {
 
         private File id = null;
@@ -642,7 +712,7 @@ public class OperettaManager {
         private boolean is_projection = false;
         private int projection_method = ZProjector.MAX_METHOD;
 
-        private File save_folder = new File( System.getProperty("user.home") );
+        private File save_folder = new File( System.getProperty( "user.home" ) );
 
         public Builder doProjection( boolean do_projection ) {
             this.is_projection = do_projection;
@@ -676,8 +746,8 @@ public class OperettaManager {
             return this;
         }
 
-        public Builder setSaveFolder( File save_folder) {
-            save_folder.mkdirs();
+        public Builder setSaveFolder( File save_folder ) {
+            save_folder.mkdirs( );
             this.save_folder = save_folder;
             return this;
         }
@@ -688,11 +758,15 @@ public class OperettaManager {
             IFormatReader reader = null;
 
             try {
+                // Create the reader
                 reader = OperettaManager.createReader( id.getAbsolutePath( ) );
 
-                // Assume we want the whole range for this data
                 if ( this.range == null ) {
                     this.range = new CZTRange.Builder( ).fromMetadata( (IMetadata) reader.getMetadataStore( ) ).build( );
+                } else {
+                    if ( this.range.getTotalPlanes( ) == 0 ) {
+                        this.range = new CZTRange.Builder( ).fromMetadata( (IMetadata) reader.getMetadataStore( ) ).build( );
+                    }
                 }
 
                 return new OperettaManager( reader,
@@ -702,7 +776,7 @@ public class OperettaManager {
                         this.norm_max,
                         this.is_projection,
                         this.projection_method,
-                        this.save_folder);
+                        this.save_folder );
 
             } catch ( Exception e ) {
                 logger.error( "Issue when creating reader for file {}: {}", id, e.toString( ) );
