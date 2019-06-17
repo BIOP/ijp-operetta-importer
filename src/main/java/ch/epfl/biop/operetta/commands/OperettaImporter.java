@@ -3,27 +3,23 @@ package ch.epfl.biop.operetta.commands;
 import ch.epfl.biop.operetta.OperettaManager;
 import ch.epfl.biop.operetta.utils.CZTRange;
 import ch.epfl.biop.operetta.utils.ListChooser;
-import ch.qos.logback.core.spi.CyclicBufferTracker;
 import ij.IJ;
 import ij.ImagePlus;
-import ij.gui.NonBlockingGenericDialog;
 import ij.gui.Roi;
-import ij.gui.WaitForUserDialog;
-import ij.plugin.ZProjector;
 import net.imagej.ImageJ;
-
-import ome.xml.model.Plate;
 import ome.xml.model.Well;
+import ome.xml.model.WellSample;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
-import org.scijava.command.Interactive;
 import org.scijava.command.InteractiveCommand;
-import org.scijava.module.ModuleItem;
-import org.scijava.object.ObjectService;
+import org.scijava.log.LogService;
+import org.scijava.module.process.PreprocessorPlugin;
+import org.scijava.module.process.SaveInputsPreprocessor;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
+import org.scijava.plugin.PluginInfo;
+import org.scijava.plugin.PluginService;
 import org.scijava.widget.Button;
-
 import org.scijava.widget.FileWidget;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,15 +36,19 @@ import java.util.stream.Collectors;
 //public class OperettaImporter implements Command {
 public class OperettaImporter extends InteractiveCommand {
 
-    private static final Logger logger = LoggerFactory.getLogger( OperettaImporter.class );
+    @Parameter
+    LogService log1;
 
     @Parameter( label = "Operetta XML file" )
     private File id;
 
+    @Parameter( label = "Downsample Factor" )
+    int downsample = 4;
+
     @Parameter( label = "Selected Wells. Leave blank for all", required = false )
     private String selected_wells_str = "";
 
-    @Parameter( label = "Choose Wells", callback = "wellChooser", required = false )
+    @Parameter( label = "Choose Wells", callback = "wellChooser", required = false, persist = false)
     private Button chooseWells;
 
     @Parameter( label = "Selected Fields. Leave blank for all", required = false )
@@ -57,18 +57,20 @@ public class OperettaImporter extends InteractiveCommand {
     @Parameter( label = "Fuse Fields", required = false )
     private boolean is_fuse_fields = true;
 
-
-    @Parameter( label = "Choose Fields", callback = "fieldChooser", required = false )
+    @Parameter( label = "Choose Fields", callback = "fieldChooser", required = false, persist = false )
     private Button chooseFields;
 
     @Parameter( label = "Roi Coordinates [x,y,w,h]. . Leave blank for full image", required = false )
     private String roi_bounds = "";
 
-    @Parameter( label = "Open Well Slice", callback = "roiChooser", required = false )
+    @Parameter( label = "Open Well Slice", callback = "roiChooser", required = false, persist = false )
     private Button openSlice;
 
-    @Parameter( label = "Get Roi From Open Well", callback = "roiSelector", required = false )
+    @Parameter( label = "Get Roi From Open Well", callback = "roiSelector", required = false, persist = false )
     private Button selectRoi;
+
+    @Parameter( label = "Select Range", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
+    String range = "You can use commas or colons to separate ranges. eg. '1:10' or '1,3,5,8' ";
 
     @Parameter( label = "Selected Channels. Leave blank for all", required = false )
     private String selected_channels_str = "";
@@ -79,20 +81,17 @@ public class OperettaImporter extends InteractiveCommand {
     @Parameter( label = "Selected Timepoints. Leave blank for all", required = false )
     private String selected_timepoints_str = "";
 
-    @Parameter( required = false )
-    private CZTRange range;
-
     @Parameter( label = "Perform Projection of Data" )
     boolean is_projection = false;
 
-    @Parameter( label = "Projection Type", choices = { "Max Intensity", "Mean Intensity", "Median", "Min Intensity" } )
+    @Parameter( label = "Projection Type", choices = {"Average Intensity", "Max Intensity", "Min Intensity", "Sum Slices", "Standard Deviation", "Median"} )
     String z_projection_method = "Max Intensity";
 
     @Parameter( label = "Save Directory", style = FileWidget.DIRECTORY_STYLE )
     File save_directory;
 
-    @Parameter( label = "Normalization range for 32-bit Images", visibility = ItemVisibility.MESSAGE )
-    String norm = "void";
+    @Parameter( label = "Choose Data Range", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
+    String norm = "Important if you have digital phase images";
 
     @Parameter( label = "Min Value" )
     Integer norm_min = 0;
@@ -100,18 +99,18 @@ public class OperettaImporter extends InteractiveCommand {
     @Parameter( label = "Max Value" )
     Integer norm_max = (int) Math.pow( 2, 16 ) - 1;
 
-    @Parameter( label = "Process", callback = "doProcess" )
+    @Parameter( label = "Process", callback = "doProcess", persist = false )
     Button process;
 
-    boolean done = false;
+    SaveInputsPreprocessor sip;
 
-    int downsample = 4;
-
-    //@Parameter(label="Operetta Manager Instance", type = ItemIO.OUTPUT)
     OperettaManager opm;
 
     List<String> selected_wells_string = new ArrayList<>( );
     List<String> selected_fields_string = new ArrayList<>( );
+
+    @Parameter
+    PluginService pluginService;
 
     private File old_id;
     private ImagePlus roiImage;
@@ -122,10 +121,10 @@ public class OperettaImporter extends InteractiveCommand {
 
             if ( roi != null ) {
                 this.roi_bounds = String.format( "%d, %d, %d, %d",
-                        roi.getBounds( ).x * downsample,
-                        roi.getBounds( ).y * downsample,
-                        roi.getBounds( ).width * downsample,
-                        roi.getBounds( ).height * downsample );
+                        roi.getBounds( ).x * 8,
+                        roi.getBounds( ).y * 8,
+                        roi.getBounds( ).width * 8,
+                        roi.getBounds( ).height * 8 );
             }
         }
     }
@@ -177,13 +176,29 @@ public class OperettaImporter extends InteractiveCommand {
 
 
     private void roiChooser( ) {
-        opm = new OperettaManager.Builder( ).setId( this.id ).build( );
+        opm = new OperettaManager.Builder( ).setId( this.id )
+                                            .doProjection( is_projection )
+                                            .setProjectionMethod( z_projection_method )
+                                            .build( );
 
-        opm.updateTRange( "1:1" );
-        opm.updateZRange( "1:1" );
+        // If there is a range, update it, otherwise choose the first timepoint and the first z
+        if( !this.selected_slices_str.equals( "" ) ) {
+            opm.getRange().updateZRange( selected_slices_str );
+        } else if( this.selected_slices_str.equals( "" ) && !this.is_projection ) {
+            opm.getRange().updateZRange( "1:1" );
+        }
 
+        if( !this.selected_timepoints_str.equals( "" ) ) {
+            opm.getRange().updateTRange( selected_timepoints_str );
+        } else if( this.selected_timepoints_str.equals( "" ) && !this.is_projection ) {
+            opm.getRange().updateTRange( "1:1" );
+        }
+
+        // Choose well to display
         String selected_well;
 
+
+        // Get the first well that is selected
         if ( selected_wells_str.length( ) != 0 )
             selected_well = stringToList( selected_wells_str ).get( 0 );
         else {
@@ -192,10 +207,19 @@ public class OperettaImporter extends InteractiveCommand {
 
         int row = getRow( selected_well );
         int col = getColumn( selected_well );
+        Well well = opm.getWell( row, col );
 
-        ImagePlus sample = opm.getWellImage( row, col, 4 );
+        ImagePlus sample;
+        if (!is_fuse_fields && !selected_fields_string.equals( "" ) ) {
+            WellSample field = opm.getField( well, getFields().get( 0 ));
+
+            sample =  opm.getFieldImage( field, 8  );
+
+        } else {
+            sample = opm.getWellImage( well, 8 );
+
+        }
         sample.show( );
-
         this.roiImage = sample;
 
     }
@@ -218,35 +242,25 @@ public class OperettaImporter extends InteractiveCommand {
         return -1;
     }
 
-    @Override
-    public void run( ) {
-
-        if ( done ) {
-            CZTRange range = new CZTRange.Builder( )
-                    .setRangeC( this.selected_channels_str )
-                    .setRangeZ( this.selected_slices_str )
-                    .setRangeT( this.selected_timepoints_str )
-                    .build( );
-
-
-            opm = new OperettaManager
-                    .Builder( )
-                    .setId( id )
-                    .setNReaders( 10 )
-                    .setRange( range )
-                    .setProjectionMethod( this.z_projection_method )
-                    .doProjection( this.is_projection )
-                    .setSaveFolder( this.save_directory )
-                    .setNormalization( norm_min, norm_max )
-
-                    .build( );
-
-
+    private List<Integer> getFields( ) {
+        if ( !selected_fields_string.equals( "" ) ) {
+            List<Integer> field_ids = selected_fields_string.stream( ).map( w -> Integer.parseInt( w.trim( ).split( " " )[ 1 ] ) ).collect( Collectors.toList( ) );
+            return field_ids;
         }
+        return null;
     }
 
 
+    private void saveParameters() {
+        final PluginInfo<PreprocessorPlugin> saveInputsPreprocessorInfo = pluginService.getPlugin(SaveInputsPreprocessor.class, PreprocessorPlugin.class);
+        final PreprocessorPlugin saveInputsPreprocessor = pluginService.createInstance(saveInputsPreprocessorInfo);
+        saveInputsPreprocessor.process(this);
+        log1.info( "Parameters Saved." );
+
+    }
+
     public void doProcess( ) {
+        saveParameters();
 
 
         CZTRange range = new CZTRange.Builder( )
@@ -283,18 +297,18 @@ public class OperettaImporter extends InteractiveCommand {
         }
 
         // Get the actual field and well ids
-        List<Integer> well_ids = selected_wells.stream().map( w -> {
+        List<Well> wells = selected_wells.stream().map( w -> {
             int row = getRow( w );
             int col = getColumn( w );
-            return opm.getWellIndex( row, col );
+            return opm.getWell( row, col);
         } ).collect( Collectors.toList());
 
-        List<Integer> field_ids = selected_fields.stream().map( w -> Integer.parseInt( w.trim().split( " " )[1]) ).collect( Collectors.toList());
+        List<Integer> field_ids = selected_fields.stream().map( w -> Integer.parseInt( w.trim( ).split( " " )[ 1 ]) ).collect( Collectors.toList());
 
 
         Roi roi = parseRoi( roi_bounds );
 
-        opm.process( this.downsample, roi, !is_fuse_fields, well_ids, field_ids);
+        opm.process( wells, field_ids, this.downsample, roi, !is_fuse_fields);
 
     }
 
@@ -304,19 +318,11 @@ public class OperettaImporter extends InteractiveCommand {
         if (roi_string.length() != 0 ) {
             String[] s = roi_string.split(",");
             if (s.length == 4)
-                bounds = new Roi( Integer.parseInt( s[0] ),  Integer.parseInt( s[1] ),  Integer.parseInt( s[2] ),  Integer.parseInt( s[3] ) );
+                bounds = new Roi( Integer.parseInt( s[0].trim() ),  Integer.parseInt( s[1].trim() ),  Integer.parseInt( s[2].trim() ),  Integer.parseInt( s[3].trim() ) );
         }
         return bounds;
     }
 
-    /**
-     * This main function serves for development purposes.
-     * It allows you to run the plugin immediately out of
-     * your integrated development environment (IDE).
-     *
-     * @param args whatever, it's ignored
-     * @throws Exception
-     */
     public static void main( final String... args ) throws Exception {
         // create the ImageJ application context with all available services
         final ImageJ ij = new ImageJ( );

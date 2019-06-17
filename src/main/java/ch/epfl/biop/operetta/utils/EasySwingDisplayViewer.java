@@ -11,8 +11,8 @@ import org.scijava.ui.viewer.DisplayPanel;
 import org.scijava.ui.viewer.DisplayViewer;
 import org.scijava.ui.viewer.DisplayWindow;
 
-import javax.swing.JPanel;
-import java.awt.BorderLayout;
+import javax.swing.*;
+import java.awt.*;
 
 abstract public class EasySwingDisplayViewer<T> extends
         AbstractDisplayViewer<T> implements DisplayViewer<T>

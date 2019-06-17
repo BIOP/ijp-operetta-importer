@@ -1,13 +1,10 @@
 package ch.epfl.biop.operetta.utils;
 
 import ch.epfl.biop.operetta.OperettaManager;
-import org.scijava.display.AbstractDisplay;
-import org.scijava.display.Display;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.viewer.DisplayViewer;
 
 import javax.swing.*;
-import java.awt.*;
 
 @Plugin(type = DisplayViewer.class)
 public class OperettaManagerViewer extends EasySwingDisplayViewer<OperettaManager> {
