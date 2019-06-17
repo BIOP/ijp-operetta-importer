@@ -1,4 +1,4 @@
-PerkinElmer Operetta Improter Command and API
+PerkinElmer Operetta Importer Command and API
 ======================================
 
 This is a (beta) new and improved version of the original Operetta Importer Script we had writted in Groovy a couple of years ago.
