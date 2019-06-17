@@ -23,7 +23,19 @@ public class CZTRange {
 
     private ImagePlus imp;
 
-    CZTRange(List<Integer> range_c, List<Integer> range_z, List<Integer> range_t) {
+    public void setRangeC( List<Integer> range_c ) {
+        this.range_c = range_c;
+    }
+
+    public void setRangeZ( List<Integer> range_z ) {
+        this.range_z = range_z;
+    }
+
+    public void setRangeT( List<Integer> range_t ) {
+        this.range_t = range_t;
+    }
+
+    CZTRange( List<Integer> range_c, List<Integer> range_z, List<Integer> range_t) {
 
         this.range_c = range_c;
         this.range_z = range_z;
@@ -81,7 +93,10 @@ public class CZTRange {
             int t = Integer.parseInt(m.group(3));
             indexes.put("T", t);
 
-            int idx = imp.getStackIndex(c, z, t);
+            // This is assuming we want an index that is continuous and starting from 1 but what if that's not the case?
+            //int idx = imp.getStackIndex(c, z, t);//int idx = imp.getStackIndex(c, z, t);
+
+            int idx = imp.getStackIndex(range_c.indexOf( c )+1, range_z.indexOf( z )+1, range_t.indexOf( t )+1);
             indexes.put("I", idx);
 
         }
@@ -130,12 +145,12 @@ public class CZTRange {
         Arrays.stream(sr).forEach(r -> {
                     String[] sr2 = r.split(":");
                     if (sr2.length == 2) {
-                        List<Integer> subrange = IntStream.rangeClosed(Integer.valueOf(sr2[0]), Integer.valueOf(sr2[1]))
+                        List<Integer> subrange = IntStream.rangeClosed(Integer.valueOf(sr2[0].trim() ), Integer.valueOf(sr2[1].trim()))
                                 .boxed().collect(Collectors.toList());
                         range.addAll(subrange);
                     } else {
                         if(sr2[0].length() > 0)
-                        range.add(Integer.valueOf(sr2[0]));
+                        range.add(Integer.valueOf(sr2[0].trim()));
                     }
                 }
         );
