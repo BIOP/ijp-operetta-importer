@@ -12,7 +12,7 @@
 		<relativePath />
 	</parent>
 
-	<version>1.0.2</version>
+	<version>0.1.2</version>
 	<repositories>
 	  <!-- NB: for project parent -->
 	  <repository>
