@@ -122,6 +122,10 @@ public class OperettaManager {
 
     }
 
+    public IFormatReader getReader() {
+        return this.main_reader;
+    }
+
     public static class Builder {
 
         private File id = null;

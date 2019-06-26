@@ -98,7 +98,6 @@
 		<license.licenseName>gpl_v3</license.licenseName>
 		<main-class>Operetta_Importer</main-class>
 		<license.copyrightOwners>BIOP</license.copyrightOwners>
-		<scijava.app.directory>C:/Fiji/</scijava.app.directory>
 		<scijava.app.subdirectory>plugins/BIOP</scijava.app.subdirectory>
 	</properties>
 
@@ -141,6 +140,14 @@
 			<groupId>org.scijava</groupId>
 			<artifactId>scijava-ui-swing</artifactId>
 			<version>0.12.0</version>
+		</dependency>
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2-ui</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>imagej-legacy</artifactId>
 		</dependency>
 	</dependencies>
 
