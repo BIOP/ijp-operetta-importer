@@ -98,6 +98,27 @@ public class OperettaManager {
         log.info( "Time to open one well: {}", sw.stop( ) );
     }
 
+    public long[] getWellTileSize( Well well, int downscale, Roi subregion ) {
+        // Get Stack width and height and modify in case there is a subregion
+
+        int stack_width = main_reader.getSizeX( );
+        int stack_height = main_reader.getSizeY( );
+
+        if ( subregion != null ) {
+            stack_width = subregion.getBounds( ).width;
+            stack_height = subregion.getBounds( ).height;
+        }
+
+        // Account for downscaling
+        stack_width /= downscale;
+        stack_height /= downscale;
+
+        // Leave in case the final stack ended up too small
+        if ( stack_height <= 1 || stack_width <= 1 ) return null;
+
+        return new long[] {stack_width, stack_height};
+    }
+
     private OperettaManager( IFormatReader reader,
                              CZTRange range,
                              int n_readers,
