@@ -1,12 +1,16 @@
 package ch.epfl.biop.operetta.commands;
 
 import ch.epfl.biop.operetta.OperettaManager;
-import ch.epfl.biop.operetta.utils.CZTRange;
-import ch.epfl.biop.operetta.utils.ListChooser;
+import ch.epfl.biop.operetta.commands.utils.ListChooser;
+import ch.epfl.biop.operetta.commands.utils.TiledCellReader;
+import ch.epfl.biop.operetta.utils.HyperRange;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Roi;
 import net.imagej.ImageJ;
+import net.imagej.ImgPlus;
+import net.imglib2.img.display.imagej.ImageJFunctions;
+import net.imglib2.type.numeric.integer.UnsignedShortType;
 import ome.xml.model.Well;
 import ome.xml.model.WellSample;
 import org.scijava.ItemVisibility;
@@ -33,9 +37,6 @@ import java.util.stream.Collectors;
 @Plugin( type = Command.class, menuPath = "Plugins>BIOP > Operetta Importer..." )
 //public class OperettaImporter implements Command {
 public class OperettaImporter extends InteractiveCommand {
-
-    @Parameter
-    LogService log1;
 
     @Parameter( label = "Operetta XML file" )
     private File id;
@@ -106,9 +107,6 @@ public class OperettaImporter extends InteractiveCommand {
 
     List<String> selected_wells_string = new ArrayList<>( );
     List<String> selected_fields_string = new ArrayList<>( );
-
-    @Parameter
-    PluginService pluginService;
 
     private File old_id;
     private ImagePlus roiImage;
@@ -222,6 +220,54 @@ public class OperettaImporter extends InteractiveCommand {
 
     }
 
+    private void roiChooserLazy( ) {
+        opm = new OperettaManager.Builder( ).setId( this.id )
+                .doProjection( is_projection )
+                .setProjectionMethod( z_projection_method )
+                .build( );
+
+        IJ.log("Current Range: "+opm.getRange().toString());
+        // If there is a range, update it, otherwise choose the first timepoint and the first z
+        if( !this.selected_slices_str.equals( "" ) ) {
+            opm.getRange().updateZRange( selected_slices_str );
+        } else if( this.selected_slices_str.equals( "" ) && this.is_projection ) {
+            opm.getRange().updateZRange( "1:1" );
+        }
+
+        if( !this.selected_timepoints_str.equals( "" ) ) {
+            opm.getRange().updateTRange( selected_timepoints_str );
+        } else if( this.selected_timepoints_str.equals( "" ) && this.is_projection ) {
+            opm.getRange().updateTRange( "1:1" );
+        }
+
+        // Choose well to display
+        String selected_well;
+
+
+        // Get the first well that is selected
+        if ( selected_wells_str.length( ) != 0 )
+            selected_well = stringToList( selected_wells_str ).get( 0 );
+        else {
+            selected_well = opm.getAvailableWellsString( ).get( 0 );
+        }
+
+        int row = getRow( selected_well );
+        int col = getColumn( selected_well );
+        Well well = opm.getWell( row, col );
+
+        ImagePlus sample;
+
+        ImgPlus<UnsignedShortType> image = TiledCellReader.createLazyImage( opm, well, 16 );
+
+
+        //ij.ui( ).show( image );
+
+        sample = ImageJFunctions.wrap(image, "test" );
+        sample.setTitle( "Well: "+selected_well );
+        sample.show();
+        this.roiImage = sample;
+
+    }
     int getRow( String well_str ) {
         Pattern p = Pattern.compile( "R(\\d)-C(\\d)" );
         Matcher m = p.matcher( well_str );
@@ -249,19 +295,10 @@ public class OperettaImporter extends InteractiveCommand {
     }
 
 
-    private void saveParameters() {
-        final PluginInfo<PreprocessorPlugin> saveInputsPreprocessorInfo = pluginService.getPlugin(SaveInputsPreprocessor.class, PreprocessorPlugin.class);
-        final PreprocessorPlugin saveInputsPreprocessor = pluginService.createInstance(saveInputsPreprocessorInfo);
-        saveInputsPreprocessor.process(this);
-        log1.info( "Parameters Saved." );
 
-    }
 
     public void doProcess( ) {
-        saveParameters();
-
-
-        CZTRange range = new CZTRange.Builder( )
+        HyperRange range = new HyperRange.Builder( )
                 .setRangeC( this.selected_channels_str )
                 .setRangeZ( this.selected_slices_str )
                 .setRangeT( this.selected_timepoints_str )
@@ -270,7 +307,6 @@ public class OperettaImporter extends InteractiveCommand {
         opm = new OperettaManager
                 .Builder( )
                 .setId( id )
-                .setNReaders( 10 )
                 .setRange( range )
                 .setProjectionMethod( this.z_projection_method )
                 .doProjection( this.is_projection )

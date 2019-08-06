@@ -2,6 +2,7 @@ package ch.epfl.biop.operetta.utils;
 
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.gui.Roi;
 import loci.formats.meta.IMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,14 +13,14 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class CZTRange {
+public class HyperRange {
 
-    private static final Logger logger = LoggerFactory.getLogger(CZTRange.class);
+    private static final Logger logger = LoggerFactory.getLogger( HyperRange.class);
 
-    List<Integer> range_c;
-    List<Integer> range_z;
-    List<Integer> range_t;
-    Pattern czt_pattern = Pattern.compile(".*p(\\d*)-ch(\\d*)sk(\\d*)fk(\\d*).*");
+    private List<Integer> range_c;
+    private List<Integer> range_z;
+    private List<Integer> range_t;
+    private final Pattern czt_pattern = Pattern.compile(".*p(\\d*)-ch(\\d*)sk(\\d*)fk(\\d*).*");
 
     private ImagePlus imp;
 
@@ -35,7 +36,7 @@ public class CZTRange {
         this.range_t = range_t;
     }
 
-    CZTRange( List<Integer> range_c, List<Integer> range_z, List<Integer> range_t) {
+    HyperRange( List<Integer> range_c, List<Integer> range_z, List<Integer> range_t) {
 
         this.range_c = range_c;
         this.range_z = range_z;
@@ -106,11 +107,11 @@ public class CZTRange {
     }
 
     public int[] getCZTDimensions() {
-        return new int[]{range_c.size(), range_z.size(), range_t.size()};
+        return new int[]{this.range_c.size(), this.range_z.size(), this.range_t.size()};
 
     }
 
-    public CZTRange confirmRange( IMetadata metadata ) {
+    public HyperRange confirmRange( IMetadata metadata ) {
         int cs = metadata.getPixelsSizeC(0).getValue();
         int zs = metadata.getPixelsSizeZ(0).getValue();
         int ts = metadata.getPixelsSizeT(0).getValue();
@@ -167,15 +168,25 @@ public class CZTRange {
         return this.range_t;
     }
 
+    @Override
+    public String toString( ) {
+        return String.format( "Range :\n\t\tC: %s\n\t\tZ: %s\n\t\tT: %s", range_c.toString(), range_z.toString(), range_t.toString() );
+    }
+
 
     public static class Builder {
-        List<Integer> range_c;
-        List<Integer> range_z;
-        List<Integer> range_t;
+        private List<Integer> range_c;
+        private List<Integer> range_z;
+        private List<Integer> range_t;
 
         public Builder setRangeC(String range_str) {
             if (range_str != null)
                 this.range_c = parseString(range_str);
+            return this;
+        }
+
+        public Builder setRangeC(int start, int end) {
+            this.range_c = IntStream.rangeClosed( start, end ).boxed().collect( Collectors.toList());
             return this;
         }
 
@@ -185,9 +196,19 @@ public class CZTRange {
             return this;
         }
 
+        public Builder setRangeZ(int start, int end) {
+            this.range_z = IntStream.rangeClosed( start, end ).boxed().collect( Collectors.toList());
+            return this;
+        }
+
         public Builder setRangeT(String range_str) {
             if (range_str != null)
                 this.range_t = parseString(range_str);
+            return this;
+        }
+
+        public Builder setRangeT(int start, int end) {
+            this.range_t = IntStream.rangeClosed( start, end ).boxed().collect( Collectors.toList());
             return this;
         }
 
@@ -200,8 +221,8 @@ public class CZTRange {
         }
 
 
-        public CZTRange build() {
-            return new CZTRange(range_c, range_z, range_t);
+        public HyperRange build() {
+            return new HyperRange(range_c, range_z, range_t);
         }
     }
 }

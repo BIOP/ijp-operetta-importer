@@ -8,7 +8,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>26.0.0</version>
+		<version>27.0.1</version>
 		<relativePath />
 	</parent>
 
@@ -97,34 +97,27 @@
 	<properties>
 		<license.licenseName>gpl_v3</license.licenseName>
 		<main-class>Operetta_Importer</main-class>
+		<package-name>ch.epfl.biop.operetta</package-name>
 		<license.copyrightOwners>BIOP</license.copyrightOwners>
+		<scijava.app.directory>C:/Fiji</scijava.app.directory>
 		<scijava.app.subdirectory>plugins/BIOP</scijava.app.subdirectory>
+		<scijava-common.version>2.78.0</scijava-common.version>
 	</properties>
 
 	<dependencies>
-
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.7.5</version>
+		</dependency>
 		<dependency>
 			<groupId>ome</groupId>
-			<artifactId>bioformats_package</artifactId>
-			<version>6.1.0</version>
-			<type>pom</type>
-			<exclusions>
-				<exclusion>
-					<!-- NB: Exclude problematic uber-JAR that bundles commons-io. -->
-					<groupId>ch.systems.cisd</groupId>
-					<artifactId>jhdf5</artifactId>
-				</exclusion>
-				<exclusion>
-					<!-- NB: Exclude problematic xalan bundle -->
-					<groupId>xalan</groupId>
-					<artifactId>xalan</artifactId>
-				</exclusion>
-				<exclusion>
-				<!-- NB: Exclude problematic xalan bundle -->
-				<groupId>xml-apis</groupId>
-				<artifactId>xml-apis</artifactId>
-				</exclusion>
-			</exclusions>
+			<artifactId>formats-gpl</artifactId>
 		</dependency>
 
 		<dependency>
@@ -150,21 +143,6 @@
 			<artifactId>imagej-legacy</artifactId>
 		</dependency>
 	</dependencies>
-
-	<build>
-		<plugins>
-			<plugin>
-				<artifactId>maven-jar-plugin</artifactId>
-				<configuration>
-					<archive>
-						<manifest>
-							<mainClass>${main-class}</mainClass>
-						</manifest>
-					</archive>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
 
 	<groupId>ch.epfl.biop</groupId>
 	<artifactId>Operetta_Importer</artifactId>

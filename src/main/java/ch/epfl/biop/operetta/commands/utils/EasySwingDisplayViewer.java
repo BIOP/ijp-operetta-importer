@@ -1,4 +1,4 @@
-package ch.epfl.biop.operetta.utils;
+package ch.epfl.biop.operetta.commands.utils;
 
 import org.scijava.display.Display;
 import org.scijava.display.event.DisplayDeletedEvent;

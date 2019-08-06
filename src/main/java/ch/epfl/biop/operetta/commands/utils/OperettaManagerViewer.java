@@ -1,4 +1,4 @@
-package ch.epfl.biop.operetta.utils;
+package ch.epfl.biop.operetta.commands.utils;
 
 import ch.epfl.biop.operetta.OperettaManager;
 import org.scijava.plugin.Plugin;

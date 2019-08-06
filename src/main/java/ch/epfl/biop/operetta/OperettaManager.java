@@ -1,8 +1,7 @@
 package ch.epfl.biop.operetta;
 
-import ch.epfl.biop.operetta.utils.CZTRange;
+import ch.epfl.biop.operetta.utils.HyperRange;
 import ij.IJ;
-import ij.ImageJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.Overlay;
@@ -45,7 +44,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-
+/**
+ * Operetta Manager class
+ * This class handles all the Operetta logic to extract data
+ *
+ * The entry point is to call the {@link Builder} class to create the correct OperettaManager object
+ */
 public class OperettaManager {
 
     private static Logger log = LoggerFactory.getLogger( OperettaManager.class );
@@ -55,10 +59,7 @@ public class OperettaManager {
 
     private IMetadata metadata;
 
-    private List<IFormatReader> readers;
-    private int n_readers;
-
-    private CZTRange range;
+    private HyperRange range;
 
     private double norm_min;
     private double norm_max;
@@ -72,56 +73,40 @@ public class OperettaManager {
 
     private double correction_factor = 0.995;
 
-    public static void main( String[] args ) {
-        new ImageJ( );
-        //File id = new File("E:\\Sonia - TRONO\\DUX__2019-05-24T12_42_31-Measurement 1\\Images\\Index.idx.xml");
-        File id = new File( "X:\\Tiling\\Opertta Tiling Magda\\Images\\Index.idx.xml" );
-
-        OperettaManager op = new Builder( )
-                .setId( id )
-                .doProjection( true )
-                .setSaveFolder( new File( "D:\\Demo" ) )
-                .build( );
-
-        StopWatch sw = new StopWatch( );
-        sw.start( );
-        //ImageStack s = op.readStack(1, 1);
-        //Roi region = new Roi(1280, 3680, 5184, 2304);
-        //Roi region = new Roi( 100, 100, 500, 500 );
-        op.process( 4, null, false );
-
-        //Roi region = null;
-
-        ImageStack s = null;
-        //op.updateZRange("1");
-
-        log.info( "Time to open one well: {}", sw.stop( ) );
+    /**
+     * returns the minimum value to use for the normalization of images,
+     * in case you have 32-bit (digital phase contrast) images in this Operetta Database
+     *
+     * @return the minimum value for normalization
+     */
+    public double getNorm_min( ) {
+        return norm_min;
     }
 
-    public long[] getWellTileSize( Well well, int downscale, Roi subregion ) {
-        // Get Stack width and height and modify in case there is a subregion
-
-        int stack_width = main_reader.getSizeX( );
-        int stack_height = main_reader.getSizeY( );
-
-        if ( subregion != null ) {
-            stack_width = subregion.getBounds( ).width;
-            stack_height = subregion.getBounds( ).height;
-        }
-
-        // Account for downscaling
-        stack_width /= downscale;
-        stack_height /= downscale;
-
-        // Leave in case the final stack ended up too small
-        if ( stack_height <= 1 || stack_width <= 1 ) return null;
-
-        return new long[] {stack_width, stack_height};
+    /**
+     * returns the maximum value to use for the normalization of images,
+     * in case you have 32-bit (digital phase contrast) images in this Operetta Database
+     *
+     * @return the maximum value for normalization
+     */
+    public double getNorm_max( ) {
+        return norm_max;
     }
 
+    /**
+     * OperettaManager Constructor. This constructor is private as you need to use the Builder class
+     * to generate the OperettaManager instance. {@link Builder}
+     * @see Builder
+     * @param reader the IFormatReader we will be using
+     * @param range the range of the data in channels slices and frames
+     * @param norm_min the intensity which will be rescaled to 0
+     * @param norm_max the intensity which will be rescaled to 65535
+     * @param is_projection whether we will perform a Z projection
+     * @param projection_type the String type of the Z projection
+     * @param save_folder the folder where the exported data should go
+     */
     private OperettaManager( IFormatReader reader,
-                             CZTRange range,
-                             int n_readers,
+                             HyperRange range,
                              double norm_min,
                              double norm_max,
                              boolean is_projection,
@@ -132,7 +117,6 @@ public class OperettaManager {
         this.main_reader = reader;
         this.metadata = (IMetadata) reader.getMetadataStore( );
         this.range = range;
-        this.n_readers = n_readers;
         this.norm_max = norm_max;
         this.norm_min = norm_min;
         this.is_projection = is_projection;
@@ -143,78 +127,136 @@ public class OperettaManager {
 
     }
 
+    /**
+     * Returns the reader used to extract metadata from the Operetta Format
+     * You could use this in order to access Bioformat's reader options
+     * @return a reader that is initialized to your dataset
+     */
     public IFormatReader getReader() {
         return this.main_reader;
     }
 
+    /**
+     * This Builder class handles creating {@link OperettaManager} objects for you
+     *
+     * If you're curious about the Builder Pattern, you can read Joshua Bloch's excellent <a href="https://www.pearson.com/us/higher-education/program/Bloch-Effective-Java-3rd-Edition/PGM1763855.html">Effective Java Book</a>
+     *
+     * Use
+     * When creating a new OperettaManager object, call the Builder, add all the options and then call the {@link Builder#build()} method
+     * <pre>
+     * * {@code
+     * * OperettaManager opm = new OperettaManager.Builder()
+     * 									.setId( id )
+     * 									.setSaveFolder( save_dir )
+     * 								//  Other options here
+     * 									.build();
+     * * }
+     * * </pre>
+     */
     public static class Builder {
 
         private File id = null;
 
-        private int n_readers = 10;
-
         private double norm_min = 0;
         private double norm_max = Math.pow( 2, 16 );
 
-        private CZTRange range = null;
+        private HyperRange range = null;
 
         private boolean is_projection = false;
         private int projection_method = ZProjector.MAX_METHOD;
 
         private File save_folder = new File( System.getProperty( "user.home" ) );
 
+        /**
+         * Determines whether the OperettaManager will Z Project the data before saving it, using {@link Builder#setProjectionMethod(String)}
+         * @param do_projection true if we wish to perform a Z projection
+         * @return a Builder object, to continue building parameters
+         */
         public Builder doProjection( boolean do_projection ) {
             this.is_projection = do_projection;
             return this;
         }
 
+        /**
+         * The projection method to use if we are using {@link Builder#doProjection(boolean)}
+         * @param method String that matches one of the strings in
+         *               <a href="https://imagej.nih.gov/ij/developer/api/ij/plugin/ZProjector.html#METHODS">the ZProjector</a>
+         * @return a Builder object, to continue building parameters
+         */
         public Builder setProjectionMethod( String method ) {
             if ( Arrays.asList( ZProjector.METHODS ).contains( method ) )
                 this.projection_method = Arrays.asList( ZProjector.METHODS ).indexOf( method );
             return this;
         }
 
-        public Builder setNReaders( int n_readers ) {
-            this.n_readers = n_readers;
-            return this;
-        }
-
+        /**
+         * Sets the values for min-max normalization
+         * In the case of digital phase images, these are in 32-bits and ImageJ cannot mix 32-bit images with 16-bit images
+         * (the standard Operetta bit depth).
+         * So we set the min and max display range that will be converted to 0-65535
+         * @param min value of the digital phase image that will be set to 0
+         * @param max value of the digital phase image that will be set to 65535
+         * @return a Builder object, to continue building parameters
+         */
         public Builder setNormalization( int min, int max ) {
             this.norm_min = min;
             this.norm_max = max;
             return this;
         }
 
+        /**
+         * This sets the id (the path to the image file), as per Bioformat's definition
+         * In the case of Operetta Data, the ID is the 'Index.idx.xml' file you get when you export it.
+         * This is usually provided as an absolute path
+         * @param id the full path of 'Index.idx.xml', in String format
+         * @return a Builder object, to continue building parameters
+         */
         public Builder setId( File id ) {
             this.id = id;
             return this;
         }
 
-        public Builder setRange( CZTRange range ) {
+        /**
+         * Can provide a range (Channels, Slices and Timepoints) to use for export. If none are provided, will
+         * export the full range of the data
+         * @param range the HyperRange object, see corresponding class
+         * @return a Builder object, to continue building parameters
+         */
+        public Builder setRange( HyperRange range ) {
             this.range = range;
             return this;
         }
 
+        /**
+         * Provides the save folder to which data will be exported to
+         * @param save_folder the folder. If not created, this method will try to create it.
+         * @return a Builder object, to continue building parameters
+         */
         public Builder setSaveFolder( File save_folder ) {
             save_folder.mkdirs( );
             this.save_folder = save_folder;
             return this;
         }
 
+        /**
+         * The build method handles creating an {@link OperettaManager} object from all the settings that were provided.
+         * This is done so that everything, like the {@link HyperRange} that is defined is valid.
+         * @return the instance to the OperettaManager.
+         */
         public OperettaManager build( ) {
 
             File id = this.id;
-            IFormatReader reader = null;
+            IFormatReader reader;
 
             try {
                 // Create the reader
                 reader = OperettaManager.createReader( id.getAbsolutePath( ) );
-
+                //log.info( "Current range is {}", range );
                 if ( this.range == null ) {
-                    this.range = new CZTRange.Builder( ).fromMetadata( (IMetadata) reader.getMetadataStore( ) ).build( );
+                    this.range = new HyperRange.Builder( ).fromMetadata( (IMetadata) reader.getMetadataStore( ) ).build( );
                 } else {
                     if ( this.range.getTotalPlanes( ) == 0 ) {
-                        CZTRange new_range = new CZTRange.Builder( ).fromMetadata( (IMetadata) reader.getMetadataStore( ) ).build( );
+                        HyperRange new_range = new HyperRange.Builder( ).fromMetadata( (IMetadata) reader.getMetadataStore( ) ).build( );
                         if ( this.range.getRangeC( ).size( ) != 0 ) new_range.setRangeC( this.range.getRangeC( ) );
                         if ( this.range.getRangeZ( ).size( ) != 0 ) new_range.setRangeZ( this.range.getRangeZ( ) );
                         if ( this.range.getRangeT( ).size( ) != 0 ) new_range.setRangeT( this.range.getRangeT( ) );
@@ -223,9 +265,12 @@ public class OperettaManager {
                     }
                 }
 
+                if (this.save_folder == null) {
+                    //TODO
+                }
+
                 return new OperettaManager( reader,
                         this.range,
-                        this.n_readers,
                         this.norm_min,
                         this.norm_max,
                         this.is_projection,
@@ -241,21 +286,44 @@ public class OperettaManager {
 
     }
 
+    /**
+     * Returns the <a href="https://downloads.openmicroscopy.org/bio-formats/5.9.2/api/loci/formats/meta/IMetadata.html">IMetadata</a>
+     * object which we can use to access all information from the Experiment
+     * @return this Experiment's metadata
+     */
     public IMetadata getMetadata( ) {
         return this.metadata;
     }
 
+    /**
+     * Returns the list of all Wells in the Experiment
+     * This is currently configured to work only with one plate, but this method could be extended to work with
+     * Experiments containing multiple plates.
+     * @return a List of wells
+     */
     public List<Well> getAvailableWells( ) {
+
         OMEXMLMetadataRoot r = (OMEXMLMetadataRoot) metadata.getRoot( );
         return r.getPlate( 0 ).copyWellList( );
     }
 
+    /**
+     * convenience method to recover the well associated to a given row and column (0 indexed for both)
+     * @param row the row (0 indexed) of the well
+     * @param column the column (0 indexed) of the well
+     * @return the well that matches the provided Row, Column indexes
+     */
     public Well getWell( int row, int column ) {
         Well well = getAvailableWells( ).stream( ).filter( w -> w.getRow( ).getValue( ) == row && w.getColumn( ).getValue( ) == column ).findFirst( ).get( );
         log.info( "Well at R{}-C{} is {}", row, column, well.getID( ) );
         return well;
     }
 
+    /**
+     * Returns a list of Field Ids (Integers) for the Experiment. We cannot return a list of Fields ({@link WellSample}s in Bioformats
+     * slang) because these are unique to each {@link Well}. The Ids, however, are the same between all {@link Well}.
+     * @return a list of Ids that corresponds to all available fields per well
+     */
     public List<Integer> getAvailableFieldIds( ) {
         // find one well
         int n_fields = metadata.getWellSampleCount( 0, 0 );
@@ -264,20 +332,37 @@ public class OperettaManager {
 
     }
 
+    /**
+     * For a given well, what are all the fields {@link WellSample} contained within
+     * @param well
+     * @return a list of Fields (WellSamples)
+     */
     public List<WellSample> getAvailableSamples( Well well ) {
         return well.copyWellSampleList( );
     }
 
+    /**
+     * Get the Field ({@link WellSample}) corresponding to the provided field_id in the given well
+     * @param well the well to query
+     * @param field_id the id of the field
+     * @return the field corresponding to the ID
+     */
     public WellSample getField( Well well, int field_id ) {
         WellSample field = getAvailableSamples( well ).stream( ).filter( s -> s.getIndex( ).getValue( ) == field_id ).findFirst( ).get( );
         log.info( "Field with ID {} is {}", field_id, field.getID( ) );
         return field;
     }
 
+    /**
+     * Convenience method to get the final name of a well based on all the user parameters passed
+     * Useful for when the fields in a well are stitched together
+     * @param well the well to get the name from
+     * @return the name of the well image to use
+     */
     public String getFinalWellImageName( Well well ) {
 
         int row = well.getRow( ).getValue( );
-        int col = well.getRow( ).getValue( );
+        int col = well.getColumn( ).getValue( );
         String project = metadata.getPlateName( 0 );
 
         String name = String.format( "%s - R%d-C%d", project, row, col );
@@ -288,14 +373,19 @@ public class OperettaManager {
 
     }
 
-    public String getFinalFieldImageName( WellSample sample ) {
-        int row = sample.getWell( ).getRow( ).getValue( );
-        int col = sample.getWell( ).getColumn( ).getValue( );
-        String field_id = sample.getID( );
+    /**
+     * Returns a usable image name that reflects the field that was selected
+     * @param field the field (WellSample) to get the name from, this contains the well information directly
+     * @return the name of the image related to this Field (in a specific well
+     */
+    public String getFinalFieldImageName( WellSample field ) {
+        int row = field.getWell( ).getRow( ).getValue( );
+        int col = field.getWell( ).getColumn( ).getValue( );
+        String field_id = field.getID( );
         String local_field_id = field_id.substring( field_id.lastIndexOf( ":" ) + 1 );
 
 
-        String project = sample.getWell( ).getPlate( ).getName( );
+        String project = field.getWell( ).getPlate( ).getName( );
 
         String name = String.format( "%s - R%d-C%d-F%s", project, row, col, local_field_id );
 
@@ -305,9 +395,13 @@ public class OperettaManager {
 
     }
 
+    /**
+     * Returns the available Fields as a String list with format [Field #, Field #,...]
+     * @return a list of field ids as Strings
+     */
     public List<String> getAvailableFieldsString( ) {
         // find one well
-        int n_fields = metadata.getWellSampleCount( 0, 0 );
+        int n_fields = (metadata).getWellSampleCount( 0, 0 );
 
         List<String> availableFields = IntStream.range( 0, n_fields ).mapToObj( f -> {
             String s = "Field " + f;
@@ -317,6 +411,10 @@ public class OperettaManager {
         return availableFields;
     }
 
+    /**
+     * Returns the available Wells as a String list with format [R#-C#, R#-C#,...]
+     * @return aa list of Strings with the Well names
+     */
     public List<String> getAvailableWellsString( ) {
         List<String> wells = getAvailableWells( ).stream( )
                 .map( w -> {
@@ -329,63 +427,112 @@ public class OperettaManager {
         return wells;
     }
 
-    public CZTRange getRange() {
-        return this.range; }
+    /**
+     * returns the range that is being exported
+     * @return a C Z T range object
+     */
+    public HyperRange getRange() { return this.range; }
 
     /**
-     * Getting an ImagePlus from single Wells
+     * Overloaded method, for simplification
+     * See {@link OperettaManager#getWellImage(Well, List, int, HyperRange, Roi)} for a complete breakdown
+     * @param well The well to export. All fields will be stitched
+     * @return
      */
     public ImagePlus getWellImage( Well well ) {
-        return makeImagePlus( readSingleWell( well, null, 1, this.range, null ), well );
+        return makeImagePlus( readSingleWell( well, null, 1, this.range, null ), well, null );
     }
-
+    /**
+     * Overloaded method, for simplification
+     * See {@link OperettaManager#getWellImage(Well, List, int, HyperRange, Roi)} for a complete breakdown
+     * @param well The well to export. All fields will be stitched
+     * @param downscale the downscale factor
+     * @return
+     */
     public ImagePlus getWellImage( Well well, int downscale ) {
-        return makeImagePlus( readSingleWell( well, null, downscale, this.range, null ), well );
-    }
-
-    public ImagePlus getWellImage( Well well, int downscale, Roi subregion ) {
-        return makeImagePlus( readSingleWell( well, null, downscale, this.range, subregion ), well );
-    }
-
-    public ImagePlus getWellImage( Well well, int downscale, CZTRange range, Roi subregion ) {
-        return makeImagePlus( readSingleWell( well, null, downscale, range, subregion ), well );
-    }
-
-    public ImagePlus getWellImage( Well well, List<WellSample> samples, int downscale, CZTRange range, Roi subregion ) {
-
-        return makeImagePlus( readSingleWell( well, samples, downscale, range, subregion ), well );
+        return makeImagePlus( readSingleWell( well, null, downscale, this.range, null ), well, null );
     }
 
     /**
-     * Getting an ImagePlus from single Fields
+     * Overloaded method, for simplification
+     * See {@link OperettaManager#getWellImage(Well, List, int, HyperRange, Roi)} for a complete breakdown
+     * @param well The well to export. All fields will be stitched
+     * @param downscale the downscale factor
+     * @param subregion a square ROI to extract
+     * @return
      */
-    public ImagePlus getFieldImage( WellSample sample ) {
-
-        return makeImagePlus( readSingleStack( sample, 1, this.range, null ), sample.getWell( ) );
+    public ImagePlus getWellImage( Well well, int downscale, Roi subregion ) {
+        return makeImagePlus( readSingleWell( well, null, downscale, this.range, subregion ), well, null );
     }
 
-    public ImagePlus getFieldImage( WellSample sample, int downscale ) {
-        return makeImagePlus( readSingleStack( sample, downscale, this.range, null ), sample.getWell( ) );
+    /**
+     * Overloaded method, for simplification
+     * See {@link OperettaManager#getWellImage(Well, List, int, HyperRange, Roi)} for a complete breakdown
+     * @param well The well to export. All fields will be stitched
+     * @param downscale the downscale factor
+     * @param range the C Z T range to extract, as a {@link HyperRange}
+     * @param subregion a square ROI to extract
+     * @return
+     */
+    public ImagePlus getWellImage( Well well, int downscale, HyperRange range, Roi subregion ) {
+        return makeImagePlus( readSingleWell( well, null, downscale, range, subregion ), well, range );
     }
 
-    public ImagePlus getFieldImage( WellSample sample, int downscale, Roi subregion ) {
-        return makeImagePlus( readSingleStack( sample, downscale, this.range, subregion ), sample.getWell( ) );
+    /**
+     * Exports the current well for the selected samples at the selected C Z T coordinates and for the given subregion
+     * into an ImagePlus
+     * @param well The well to export. All fields will be stitched
+     * @param fields the fields to export
+     * @param downscale the downscale factor
+     * @param range the C Z T range to extract, as a {@link HyperRange}
+     * @param subregion a square ROI to extract
+     * @return a calibrated ImagePlus
+     */
+    public ImagePlus getWellImage( Well well, List<WellSample> fields, int downscale, HyperRange range, Roi subregion ) {
+
+        return makeImagePlus( readSingleWell( well, fields, downscale, range, subregion ), well, range );
     }
 
-    public ImagePlus getFieldImage( WellSample sample, int downscale, CZTRange range, Roi subregion ) {
+    /**
+     * Exports the current field as an ImagePlus
+     * @param field the Field to export, get is through the metadata {@link OperettaManager#getMetadata()}
+     * @return a calibrated ImagePlus
+     */
+    public ImagePlus getFieldImage( WellSample field ) {
 
-        return makeImagePlus( readSingleStack( sample, downscale, range, subregion ), sample.getWell( ) );
+        return makeImagePlus( readSingleStack( field, 1, this.range, null ), field.getWell( ), null );
     }
 
-    public ImageStack readSingleStack( WellSample sample, final int downscale, CZTRange range, final Roi subregion ) {
+    public ImagePlus getFieldImage( WellSample field, int downscale ) {
+        return makeImagePlus( readSingleStack( field, downscale, this.range, null ), field.getWell( ), null );
+    }
 
-        final int series_id = sample.getIndex( ).getValue( ); // This is the series ID
+    public ImagePlus getFieldImage( WellSample field, int downscale, Roi subregion ) {
+        return makeImagePlus( readSingleStack( field, downscale, this.range, subregion ), field.getWell( ), null );
+    }
 
-        final int row = sample.getWell( ).getRow( ).getValue( );
-        final int column = sample.getWell( ).getColumn( ).getValue( );
+    public ImagePlus getFieldImage( WellSample field, int downscale, HyperRange range, Roi subregion ) {
+
+        return makeImagePlus( readSingleStack( field, downscale, range, subregion ), field.getWell( ), range );
+    }
+
+    /**
+     * Method to read a single stack from a field
+     * @param field the field to export
+     * @param downscale the downscale factor
+     * @param range the range in C Z T to use
+     * @param subregion an optional subregion roi, set to null for none
+     * @return an ImageStack
+     */
+    public ImageStack readSingleStack( WellSample field, final int downscale, HyperRange range, final Roi subregion ) {
+
+        final int series_id = field.getIndex( ).getValue( ); // This is the series ID
+
+        final int row = field.getWell( ).getRow( ).getValue( );
+        final int column = field.getWell( ).getColumn( ).getValue( );
         main_reader.setSeries( series_id );
 
-        final CZTRange range2 = range.confirmRange( metadata );
+        final HyperRange range2 = range.confirmRange( metadata );
         final int n = range2.getTotalPlanes( );
 
         boolean do_norm = main_reader.getBitsPerPixel( ) != 16;
@@ -411,14 +558,13 @@ public class OperettaManager {
         final ImageStack stack = ImageStack.create( stack_width, stack_height, n, 16 );
 
 
-        List<String> files = Arrays.asList( main_reader.getSeriesUsedFiles( false ) )
-                .stream( )
+        List<String> files = Arrays.stream( main_reader.getSeriesUsedFiles( false ) )
                 .filter( f -> f.endsWith( ".tiff" ) )
                 .collect( Collectors.toList( ) );
         StopWatch sw = new StopWatch( );
         sw.start( );
 
-        ForkJoinPool planeWorkerPool = new ForkJoinPool( n_readers );
+        ForkJoinPool planeWorkerPool = new ForkJoinPool( 10 );
         try {
             planeWorkerPool.submit( ( ) -> IntStream.range( 0, files.size( ) )
                     .parallel( )
@@ -454,24 +600,33 @@ public class OperettaManager {
             log.error( "Reading Stack " + series_id + " error:", e );
         }
         sw.stop( );
-        log.info( "Well " + sample.getWell( ).getID( ) + " stack " + series_id + " took " + ( (double) sw.getElapsedTime( ) / 1000.0 ) + " seconds" );
+        log.info( "Well " + field.getWell( ).getID( ) + " stack " + series_id + " took " + ( (double) sw.getElapsedTime( ) / 1000.0 ) + " seconds" );
         return stack;
     }
 
-    public ImageStack readSingleWell( Well well, List<WellSample> samples, final int downscale, CZTRange range, final Roi bounds ) {
+    /**
+     * Returns a stitched stack for the given well and associates fields
+     * @param well the well to export
+     * @param fields the
+     * @param downscale
+     * @param range
+     * @param bounds
+     * @return an ImageStack
+     */
+    private ImageStack readSingleWell( Well well, List<WellSample> fields, final int downscale, HyperRange range, final Roi bounds ) {
 
         // Get the positions for each field (called a sample by BioFormats) in this well
-        if ( samples == null ) samples = well.copyWellSampleList( );
+        if ( fields == null ) fields = well.copyWellSampleList( );
 
         // Out of these coordinates, keep only those that are intersecting with the bounds
-        final List<WellSample> adjusted_samples = getIntersectingSamples( samples, bounds );
+        final List<WellSample> adjusted_fields= getIntersectingFields( fields, bounds );
 
-        if ( adjusted_samples.size( ) == 0 ) return null;
+        if ( adjusted_fields.size( ) == 0 ) return null;
 
-        int a_sample_id = samples.get( 0 ).getIndex( ).getValue( );
+        int a_field_id = fields.get( 0 ).getIndex( ).getValue( );
         // We need to know the width and height of a single image
-        int sample_width = metadata.getPixelsSizeX( a_sample_id ).getValue( );
-        int sample_height = metadata.getPixelsSizeY( a_sample_id ).getValue( );
+        int sample_width = metadata.getPixelsSizeX( a_field_id ).getValue( );
+        int sample_height = metadata.getPixelsSizeY( a_field_id ).getValue( );
 
         // Get extents for the final image
         Point topleft = getTopLeftCoordinates( well.copyWellSampleList( ) );
@@ -491,7 +646,7 @@ public class OperettaManager {
         well_height /= downscale;
 
         // Confirm the range based on the available metadata
-        final CZTRange range2 = range.confirmRange( metadata );
+        final HyperRange range2 = range.confirmRange( metadata );
 
         final int n = range2.getTotalPlanes( );
 
@@ -500,14 +655,14 @@ public class OperettaManager {
 
         AtomicInteger ai = new AtomicInteger( 0 );
 
-        adjusted_samples.stream( ).forEachOrdered( sample -> {
-            // sample subregion should give the ROI coordiantes for the current sample that we want to read
-            Roi subregion = getSampleSubregion( sample, bounds, topleft );
+        adjusted_fields.stream( ).forEachOrdered( field -> {
+            // sample subregion should give the ROI coordinates for the current sample that we want to read
+            Roi subregion = getFieldSubregion( field, bounds, topleft );
 
-            final Point pos = getSampleAdjustedCoordinates( sample, bounds, subregion, topleft, downscale );
+            final Point pos = getFieldAdjustedCoordinates( field, bounds, subregion, topleft, downscale );
             log.info( String.format( "Sample Position: %d, %d", pos.x, pos.y ) );
 
-            final ImageStack stack = readSingleStack( sample, downscale, range2, subregion );
+            final ImageStack stack = readSingleStack( field, downscale, range2, subregion );
 
             if ( stack != null ) {
                 for ( int s = 0; s < stack.size( ); s++ ) {
@@ -519,7 +674,7 @@ public class OperettaManager {
 
                 // Use an AtomicInteger so that the log looks nice
                 final int field_counter = ai.getAndIncrement( );
-                log.info( String.format( "Field %d of %d Copied to Well", field_counter + 1, adjusted_samples.size( ) ) );
+                log.info( String.format( "Field %d of %d Copied to Well", field_counter + 1, adjusted_fields.size( ) ) );
             }
         } );
 
@@ -528,47 +683,60 @@ public class OperettaManager {
 
     }
 
-    // TODO: Format for selecting valid wells and fields
+    /**
+     * this method tries to simplify the processing for a full export
+      * @param downscale the downscale factor
+     * @param region an optional Roi to export, set to null for whole image
+     * @param is_fields_individual export each field individually or as a stitched well
+     */
     public void process( int downscale, Roi region, boolean is_fields_individual ) {
         process( null, null, downscale, region, is_fields_individual );
     }
 
-    public void process( List<Well> wells, List<Integer> samples, int downscale, Roi region, boolean is_fields_individual ) {
+    /**
+     * this method tries to simplify the processing for a full export
+     * @param wells all the Wells to process as a list
+     * @param fields all the Field IDs to process, as a list, set to null to process all
+     * @param downscale the downscale factor
+     * @param region an optional Roi to export, set to null for whole image
+     * @param is_fields_individual export each field individually or as a stitched well
+     */
+    public void process( List<Well> wells, List<Integer> fields, int downscale, Roi region, boolean is_fields_individual ) {
         // Process everything
         // decide whether we process wells or fields
         if ( wells == null ) {
             wells = getAvailableWells( );
         }
 
-        List<WellSample> well_samples;
+        List<WellSample> well_fields;
         for ( Well well : wells ) {
             log.info( "Well: {}", well );
-            if ( samples != null ) {
-                well_samples = samples.stream( ).map( well::getWellSample ).collect( Collectors.toList( ) );
+            if ( fields != null ) {
+                well_fields = fields.stream( ).map( well::getWellSample ).collect( Collectors.toList( ) );
             } else {
                 // Get the samples associates with the current well, by index
-                well_samples = well.copyWellSampleList( );
+                well_fields = well.copyWellSampleList( );
             }
 
             //final List<WellSample> fi = getIntersectingSamples( well_samples, region );
 
             if ( is_fields_individual ) {
-                for ( WellSample sample : well_samples ) {
-                    ImagePlus field_image = getFieldImage( sample, downscale, this.range, region );
-                    String name = getFinalFieldImageName( sample );
+                for ( WellSample field : well_fields ) {
+                    ImagePlus field_image = getFieldImage( field, downscale, this.range, region );
+                    String name = getFinalFieldImageName( field );
                     if ( field_image != null )
                         IJ.saveAsTiff( field_image, new File( save_folder, name + ".tif" ).getAbsolutePath( ) );
                 }
                 // Save the positions file
                 // Get the positions that were used, just compute them again
                 try {
-                    writeWellPositionsFile( well_samples, new File( save_folder, getFinalWellImageName( well ) + ".txt" ), downscale );
+                    writeWellPositionsFile( well_fields, new File( save_folder, getFinalWellImageName( well ) + ".txt" ), downscale );
                 } catch ( IOException e ) {
                     e.printStackTrace( );
                 }
 
             } else {
-                ImagePlus well_image = getWellImage( well, well_samples, downscale, this.range, region );
+                ImagePlus well_image = getWellImage( well, well_fields, downscale, this.range, region );
                 String name = getFinalWellImageName( well );
                 if ( well_image != null ) {
                     IJ.saveAsTiff( well_image, new File( save_folder, name + ".tif" ).getAbsolutePath( ) );
@@ -588,30 +756,6 @@ public class OperettaManager {
     /*///////////////////////////////////
      * Private methods below ////////////
      *///////////////////////////////////
-
-    private void createReaders( ) {
-
-        // Create multiple readers
-        this.readers = IntStream.range( 0, n_readers ).parallel( ).mapToObj( i -> {
-            IFormatReader r = new OperettaReader( );
-
-            IFormatReader memo2 = new Memoizer( r );
-
-            IMetadata meta = MetadataTools.createOMEXMLMetadata( );
-            memo2.setMetadataStore( meta );
-
-            try {
-                memo2.setId( this.id.getAbsolutePath( ) );
-            } catch ( FormatException e ) {
-                e.printStackTrace( );
-            } catch ( IOException e ) {
-                e.printStackTrace( );
-            }
-
-            return memo2;
-        } ).collect( Collectors.toList( ) );
-
-    }
 
     /**
      * writeWellPositionsFile can write the coodrinates of the selected individually saved wells to a file to use with
@@ -643,10 +787,23 @@ public class OperettaManager {
         }
     }
 
+    /**
+     * Check Rois for overlap, as rectangles only
+     * @param one
+     * @param other
+     * @return
+     */
     private boolean isOverlapping( Roi one, Roi other ) {
         return one.getBounds( ).intersects( other.getBounds( ) );
     }
 
+    /**
+     * Initializes the reader for this series and makes sure to use Memoization
+     * @param id
+     * @return
+     * @throws IOException
+     * @throws FormatException
+     */
     private static IFormatReader createReader( final String id ) throws IOException, FormatException {
 
         final IFormatReader imageReader = new OperettaReader( );
@@ -660,14 +817,20 @@ public class OperettaManager {
         return memo;
     }
 
-    private List<WellSample> getIntersectingSamples( List<WellSample> samples, Roi bounds ) {
+    /**
+     * Finds fields related to the bounds that were given, so as to limit the number of files to export
+     * @param fields
+     * @param bounds
+     * @return
+     */
+    private List<WellSample> getIntersectingFields( List<WellSample> fields, Roi bounds ) {
         // Coordinates are in pixels
         // bounds are in pixels
 
         ImagePlus imp = IJ.createImage( "", 500, 500, 1, 8 );
         imp.setOverlay( new Overlay( ) );
         // Coordinates are set to 0 for each well
-        if ( bounds == null ) return samples;
+        if ( bounds == null ) return fields;
         log.info( "Looking for samples intersecting with {}, ", bounds );
 
         // We are selecting bounds
@@ -675,11 +838,9 @@ public class OperettaManager {
 
         imp.getOverlay( ).add( resampleRoi( bounds, 30 ) );
 
+        Point topleft = getTopLeftCoordinates( fields );
 
-        Point topleft = getTopLeftCoordinates( samples );
-
-
-        List<WellSample> selected = samples.stream( ).filter( s -> {
+        List<WellSample> selected = fields.stream( ).filter( s -> {
 
             int sample_id = s.getIndex( ).getValue( );
             int x = getUncalibratedPositionX( s ) - topleft.x;
@@ -690,7 +851,6 @@ public class OperettaManager {
             Roi other = new Roi( x, y, w, h );
             imp.getOverlay( ).add( resampleRoi( other, 30 ) );
 
-
             return isOverlapping( bounds, other );
 
         } ).collect( Collectors.toList( ) );
@@ -700,14 +860,28 @@ public class OperettaManager {
         return selected;
     }
 
+    /**
+     * reduces or enlarges ROI coordinates to match resampling
+     * @param r the roi
+     * @param s the downsample factor
+     * @return a new Roi with adjusted size
+     */
     private Roi resampleRoi( Roi r, int s ) {
         return new Roi( r.getBounds( ).x / s, r.getBounds( ).y / s, r.getBounds( ).width / s, r.getBounds( ).height / s );
     }
 
-    private ImagePlus makeImagePlus( ImageStack stack, Well well ) {
+    /**
+     * Convenience function to make an ImagePlus out of the exported stack, with proper metadata
+     * Will also handle the Z Projection if any
+     * @param stack the Stack produced
+     * @param well the well where the stack comes from
+     * @param range the range, for metadata purposes, can be null
+     * @return a calibrated ImagePlus
+     */
+    private ImagePlus makeImagePlus( ImageStack stack, Well well, HyperRange range ) {
         if ( stack == null ) return null;
         // Get the dimensions
-        int[] czt = this.range.getCZTDimensions( );
+        int[] czt = range == null ? this.range.getCZTDimensions( ) : range.getCZTDimensions();
 
         double px_size = 1;
         double px_depth = 1;
@@ -736,7 +910,7 @@ public class OperettaManager {
         String name = getFinalWellImageName( well );
 
         ImagePlus result = new ImagePlus( name, stack );
-        result.show( );
+        //result.show( );
         if ( ( czt[ 0 ] + czt[ 1 ] + czt[ 2 ] ) > 3 )
             result = HyperStackConverter.toHyperStack( result, czt[ 0 ], czt[ 1 ], czt[ 2 ] );
 
@@ -766,19 +940,26 @@ public class OperettaManager {
 
     }
 
-    private Roi getSampleSubregion( WellSample sample, Roi bounds, Point topleft ) {
+    /**
+     * This determines the bounds of an ROI for a single field, for the export
+     * @param field the field
+     * @param bounds the roi bounds
+     * @param topleft the topleft coordinate, as a Point()
+     * @return
+     */
+    private Roi getFieldSubregion( WellSample field, Roi bounds, Point topleft ) {
 
         // The field always contains the subregion so we avoid checking for overlap
         int x, y, w, h;
         x = 0;
         y = 0;
 
-        int sample_id = sample.getIndex( ).getValue( );
+        int sample_id = field.getIndex( ).getValue( );
 
         w = metadata.getPixelsSizeX( sample_id ).getValue( );
         h = metadata.getPixelsSizeY( sample_id ).getValue( );
 
-        Point coordinates = getUncalibratedCoordinates( sample );
+        Point coordinates = getUncalibratedCoordinates( field );
         coordinates.translate( -topleft.x, -topleft.y );
         if ( bounds != null ) {
 
@@ -795,8 +976,13 @@ public class OperettaManager {
         return new Roi( x, y, w, h );
     }
 
-    private Integer getUncalibratedPositionX( WellSample sample ) {
-        Length px = sample.getPositionX( );
+    /**
+     * Returns the X position of the field in pixels
+     * @param field
+     * @return
+     */
+    private Integer getUncalibratedPositionX( WellSample field ) {
+        Length px = field.getPositionX( );
 
         if ( px == null ) return null;
 
@@ -804,9 +990,13 @@ public class OperettaManager {
 
         return Math.toIntExact( Math.round( px_m / px_size.value( UNITS.NANOMETER ).doubleValue( ) * this.correction_factor ) );
     }
-
-    private Integer getUncalibratedPositionY( WellSample sample ) {
-        Length px = sample.getPositionY( );
+    /**
+     * Returns the Y position of the field in pixels
+     * @param field
+     * @return
+     */
+    private Integer getUncalibratedPositionY( WellSample field ) {
+        Length px = field.getPositionY( );
 
         if ( px == null ) return null;
 
@@ -814,18 +1004,31 @@ public class OperettaManager {
 
         return Math.toIntExact( Math.round( px_m / px_size.value( UNITS.NANOMETER ).doubleValue( ) * this.correction_factor ) );
     }
-
-    private Point getUncalibratedCoordinates( WellSample sample ) {
-        Integer px = getUncalibratedPositionX( sample );
-        Integer py = getUncalibratedPositionY( sample );
+    /**
+     * Returns the position of the field in pixels as a Point
+     * @param field the field for which we need to coordinates
+     * @return
+     */
+    private Point getUncalibratedCoordinates( WellSample field ) {
+        Integer px = getUncalibratedPositionX( field );
+        Integer py = getUncalibratedPositionY( field );
         return new Point( px, py );
     }
 
-    private Point getSampleAdjustedCoordinates( WellSample sample, Roi bounds, Roi subregion, Point topleft, int downscale ) {
+    /**
+     * Returns the final coordinates of a field based on all given arguments.
+     * @param field the field (WellSample)
+     * @param bounds a roi, null if none
+     * @param subregion a subroi
+     * @param topleft the top left coordinate point
+     * @param downscale the downsample factor
+     * @return the new coordinate for the given Field
+     */
+    public Point getFieldAdjustedCoordinates( WellSample field, Roi bounds, Roi subregion, Point topleft, int downscale ) {
 
         //return new Point(subregion.getBounds().x, subregion.getBounds().y);
 
-        Point pos = getUncalibratedCoordinates( sample );
+        Point pos = getUncalibratedCoordinates( field );
 
         // After this, pos is the absolute position of the current sample in pixels and that should be it
         pos.translate( -topleft.x, -topleft.y );
@@ -842,24 +1045,42 @@ public class OperettaManager {
 
     }
 
-    private Point getTopLeftCoordinates( java.util.List<WellSample> samples ) {
-        WellSample minx = samples.stream( ).min( Comparator.comparing( WellSample::getPositionX ) ).get( );
-        WellSample miny = samples.stream( ).min( Comparator.comparing( WellSample::getPositionY ) ).get( );
+    /**
+     * Returns the top left coordinates as a point
+     * @param fields the fields we should get the coordinates for
+     * @return a point with the xy pixel coordinates
+     */
+    public Point getTopLeftCoordinates( java.util.List<WellSample> fields ) {
+        fields = fields.stream().filter( sample -> sample.getPositionX() != null ).collect( Collectors.toList());
+
+        WellSample minx = fields.stream( ).min( Comparator.comparing( WellSample::getPositionX ) ).get( );
+        WellSample miny = fields.stream( ).min( Comparator.comparing( WellSample::getPositionY ) ).get( );
+
         int px = getUncalibratedPositionX( minx );
         int py = getUncalibratedPositionY( miny );
 
         return new Point( px, py );
-
     }
 
-    private Point getBottomRightCoordinates( List<WellSample> samples ) {
-        WellSample maxx = samples.stream( ).max( Comparator.comparing( WellSample::getPositionX ) ).get( );
-        WellSample maxy = samples.stream( ).max( Comparator.comparing( WellSample::getPositionY ) ).get( );
+    /**
+     * Returns the bottom right coordinates as a point
+     * @param fields the fields we should get the coordinates for
+     * @return a point with the xy pixel coordinates
+     */
+    public Point getBottomRightCoordinates( List<WellSample> fields ) {
+        fields = fields.stream().filter( sample -> sample.getPositionX() != null ).collect( Collectors.toList());
 
-        int px = getUncalibratedPositionX( maxx );
-        int py = getUncalibratedPositionY( maxy );
+        WellSample maxx = fields.stream( ).max( Comparator.comparing( WellSample::getPositionX ) ).get( );
+        WellSample maxy = fields.stream( ).max( Comparator.comparing( WellSample::getPositionY ) ).get( );
+        // Might need something like this ( ( OMEXMLMetadata) metadata.getRoot() ).getPlanePositionX(  )
 
-        return new Point( px, py );
+        Integer px = getUncalibratedPositionX( maxx );
+        Integer py = getUncalibratedPositionY( maxy );
 
+        if (px != null && py!= null) {
+            return new Point( px, py );
+        } else {
+            return new Point( 0,0 );
+        }
     }
 }
