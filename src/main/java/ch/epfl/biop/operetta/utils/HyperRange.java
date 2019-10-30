@@ -138,7 +138,7 @@ public class HyperRange {
 
         return this;
     }
-    private static List<Integer> parseString(String s) {
+    public static List<Integer> parseString(String s) {
         // first split by commas
         List<Integer> range = new ArrayList<>();
 
