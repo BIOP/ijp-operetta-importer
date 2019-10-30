@@ -16,13 +16,8 @@ import ome.xml.model.WellSample;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
 import org.scijava.command.InteractiveCommand;
-import org.scijava.log.LogService;
-import org.scijava.module.process.PreprocessorPlugin;
-import org.scijava.module.process.SaveInputsPreprocessor;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.plugin.PluginInfo;
-import org.scijava.plugin.PluginService;
 import org.scijava.widget.Button;
 import org.scijava.widget.FileWidget;
 
@@ -87,7 +82,7 @@ public class OperettaImporter extends InteractiveCommand {
     String z_projection_method = "Max Intensity";
 
     @Parameter( label = "Save Directory", style = FileWidget.DIRECTORY_STYLE )
-    File save_directory;
+    File save_directory = new File( System.getProperty( "user.home" ) + File.separator );
 
     @Parameter( label = "Choose Data Range", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String norm = "Important if you have digital phase images";
@@ -100,8 +95,6 @@ public class OperettaImporter extends InteractiveCommand {
 
     @Parameter( label = "Process", callback = "doProcess", persist = false )
     Button process;
-
-    SaveInputsPreprocessor sip;
 
     OperettaManager opm;
 
@@ -342,7 +335,11 @@ public class OperettaImporter extends InteractiveCommand {
 
         Roi roi = parseRoi( roi_bounds );
 
+        // Write the associated macro command
+
         opm.process( wells, field_ids, this.downsample, roi, !is_fuse_fields);
+
+
 
     }
 
