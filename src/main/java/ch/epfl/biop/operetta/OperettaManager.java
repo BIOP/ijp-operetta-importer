@@ -67,6 +67,10 @@ public class OperettaManager {
     private boolean is_projection;
     private int projection_type;
 
+    public File getSaveFolder( ) {
+        return save_folder;
+    }
+
     private File save_folder;
 
     private Length px_size;
@@ -440,7 +444,7 @@ public class OperettaManager {
      * @return
      */
     public ImagePlus getWellImage( Well well ) {
-        return makeImagePlus( readSingleWell( well, null, 1, this.range, null ), well, null );
+        return makeImagePlus( readSingleWell( well, null, 1, this.range, null ), well, null, getFinalWellImageName( well ) );
     }
     /**
      * Overloaded method, for simplification
@@ -450,7 +454,7 @@ public class OperettaManager {
      * @return
      */
     public ImagePlus getWellImage( Well well, int downscale ) {
-        return makeImagePlus( readSingleWell( well, null, downscale, this.range, null ), well, null );
+        return makeImagePlus( readSingleWell( well, null, downscale, this.range, null ), well, null, getFinalWellImageName( well ) );
     }
 
     /**
@@ -462,7 +466,7 @@ public class OperettaManager {
      * @return
      */
     public ImagePlus getWellImage( Well well, int downscale, Roi subregion ) {
-        return makeImagePlus( readSingleWell( well, null, downscale, this.range, subregion ), well, null );
+        return makeImagePlus( readSingleWell( well, null, downscale, this.range, subregion ), well, null, getFinalWellImageName( well )  );
     }
 
     /**
@@ -475,7 +479,7 @@ public class OperettaManager {
      * @return
      */
     public ImagePlus getWellImage( Well well, int downscale, HyperRange range, Roi subregion ) {
-        return makeImagePlus( readSingleWell( well, null, downscale, range, subregion ), well, range );
+        return makeImagePlus( readSingleWell( well, null, downscale, range, subregion ), well, range, getFinalWellImageName( well )  );
     }
 
     /**
@@ -490,7 +494,7 @@ public class OperettaManager {
      */
     public ImagePlus getWellImage( Well well, List<WellSample> fields, int downscale, HyperRange range, Roi subregion ) {
 
-        return makeImagePlus( readSingleWell( well, fields, downscale, range, subregion ), well, range );
+        return makeImagePlus( readSingleWell( well, fields, downscale, range, subregion ), well, range, getFinalWellImageName( well )  );
     }
 
     /**
@@ -499,21 +503,20 @@ public class OperettaManager {
      * @return a calibrated ImagePlus
      */
     public ImagePlus getFieldImage( WellSample field ) {
-
-        return makeImagePlus( readSingleStack( field, 1, this.range, null ), field.getWell( ), null );
+        return makeImagePlus( readSingleStack( field, 1, this.range, null ), field.getWell( ), null, getFinalFieldImageName( field )  );
     }
 
     public ImagePlus getFieldImage( WellSample field, int downscale ) {
-        return makeImagePlus( readSingleStack( field, downscale, this.range, null ), field.getWell( ), null );
+        return makeImagePlus( readSingleStack( field, downscale, this.range, null ), field.getWell( ), null, getFinalFieldImageName( field ) );
     }
 
     public ImagePlus getFieldImage( WellSample field, int downscale, Roi subregion ) {
-        return makeImagePlus( readSingleStack( field, downscale, this.range, subregion ), field.getWell( ), null );
+        return makeImagePlus( readSingleStack( field, downscale, this.range, subregion ), field.getWell( ), null,getFinalFieldImageName( field ) );
     }
 
     public ImagePlus getFieldImage( WellSample field, int downscale, HyperRange range, Roi subregion ) {
 
-        return makeImagePlus( readSingleStack( field, downscale, range, subregion ), field.getWell( ), range );
+        return makeImagePlus( readSingleStack( field, downscale, range, subregion ), field.getWell( ), range,getFinalFieldImageName( field ) );
     }
 
     /**
@@ -878,7 +881,7 @@ public class OperettaManager {
      * @param range the range, for metadata purposes, can be null
      * @return a calibrated ImagePlus
      */
-    private ImagePlus makeImagePlus( ImageStack stack, Well well, HyperRange range ) {
+    private ImagePlus makeImagePlus( ImageStack stack, Well well, HyperRange range, String name ) {
         if ( stack == null ) return null;
         // Get the dimensions
         int[] czt = range == null ? this.range.getCZTDimensions( ) : range.getCZTDimensions();
@@ -907,8 +910,6 @@ public class OperettaManager {
             time_unit = UNITS.MILLISECOND.getSymbol( );
         }
 
-        String name = getFinalWellImageName( well );
-
         ImagePlus result = new ImagePlus( name, stack );
         //result.show( );
         if ( ( czt[ 0 ] + czt[ 1 ] + czt[ 2 ] ) > 3 )
@@ -929,7 +930,7 @@ public class OperettaManager {
             ZProjector zp = new ZProjector( );
             zp.setImage( result );
             zp.setMethod( this.projection_type );
-            //zp.setStopSlice( result.getNSlices( ) );
+            zp.setStopSlice( result.getNSlices( ) );
             if ( result.getNSlices( ) > 1 || result.getNFrames( ) > 1 ) {
                 zp.doHyperStackProjection( false );
                 result = zp.getProjection( );
