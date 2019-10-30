@@ -2,6 +2,7 @@ package ch.epfl.biop.operetta.commands.utils;
 
 import ch.epfl.biop.operetta.OperettaManager;
 import org.scijava.plugin.Plugin;
+import org.scijava.ui.swing.viewer.EasySwingDisplayViewer;
 import org.scijava.ui.viewer.DisplayViewer;
 
 import javax.swing.*;
