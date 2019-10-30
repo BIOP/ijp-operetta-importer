@@ -1,12 +1,7 @@
 package ch.epfl.biop.operetta;
 
-import ch.epfl.biop.operetta.commands.utils.TiledCellReader;
 import ij.ImageJ;
 import ij.ImageStack;
-import net.imagej.ImgPlus;
-import net.imglib2.img.display.imagej.ImageJFunctions;
-import net.imglib2.type.numeric.integer.UnsignedShortType;
-import ome.xml.model.Well;
 import org.perf4j.StopWatch;
 
 import java.io.File;

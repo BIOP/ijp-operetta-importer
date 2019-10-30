@@ -2,7 +2,6 @@ package ch.epfl.biop.operetta.utils;
 
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.gui.Roi;
 import loci.formats.meta.IMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

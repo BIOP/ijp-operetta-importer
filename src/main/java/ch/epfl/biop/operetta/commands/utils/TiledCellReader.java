@@ -4,7 +4,6 @@ import ch.epfl.biop.operetta.OperettaManager;
 import ij.IJ;
 import net.imagej.ImgPlus;
 import net.imagej.axis.Axes;
-
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.img.CellLoader;
 import net.imglib2.cache.img.ReadOnlyCachedCellImgFactory;

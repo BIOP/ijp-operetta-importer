@@ -1,13 +1,6 @@
 package ch.epfl.biop.operetta;
 
-import ch.epfl.biop.operetta.commands.utils.TiledCellReader;
 import net.imagej.ImageJ;
-import net.imagej.ImgPlus;
-import net.imglib2.img.display.imagej.ImageJFunctions;
-import net.imglib2.type.numeric.integer.UnsignedShortType;
-import ome.xml.model.Well;
-
-import java.io.File;
 
 @Deprecated
 public class Main {
