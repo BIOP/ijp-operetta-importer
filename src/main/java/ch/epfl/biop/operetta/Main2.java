@@ -11,6 +11,7 @@ import org.perf4j.StopWatch;
 
 import java.io.File;
 
+@Deprecated
 public class Main2 {
 
     public static void main( String[] args ) {
