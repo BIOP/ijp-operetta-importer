@@ -280,11 +280,12 @@ public class OperettaImporter extends InteractiveCommand {
     }
 
     private List<Integer> getFields( ) {
-        if ( !selected_fields_string.equals( "" ) ) {
+        if ( selected_fields_string.size() != 0 ) {
             List<Integer> field_ids = selected_fields_string.stream( ).map( w -> Integer.parseInt( w.trim( ).split( " " )[ 1 ] ) ).collect( Collectors.toList( ) );
             return field_ids;
+        } else {
+            return opm.getAvailableFieldIds();
         }
-        return null;
     }
 
 

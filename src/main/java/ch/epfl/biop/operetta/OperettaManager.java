@@ -725,11 +725,13 @@ public class OperettaManager {
                 well_fields = well.copyWellSampleList( );
             }
 
-            //final List<WellSample> fi = getIntersectingSamples( well_samples, region );
+            if (region != null)  well_fields = getIntersectingFields( well_fields, region );
 
             if ( is_fields_individual ) {
+                Point topleft = getTopLeftCoordinates( well_fields );
+
                 for ( WellSample field : well_fields ) {
-                    ImagePlus field_image = getFieldImage( field, downscale, this.range, region );
+                    ImagePlus field_image = getFieldImage( field, downscale, this.range, null );
                     String name = getFinalFieldImageName( field );
                     if ( field_image != null )
                         IJ.saveAsTiff( field_image, new File( save_folder, name + ".tif" ).getAbsolutePath( ) );
@@ -772,7 +774,7 @@ public class OperettaManager {
      * @param downscale the downscale with which to adjust the coordinates
      * @throws IOException error in case of problem working with the positions file
      */
-    private void writeWellPositionsFile( List<WellSample> samples, File position_file, int downscale ) throws IOException {
+    public void writeWellPositionsFile( List<WellSample> samples, File position_file, int downscale ) throws IOException {
         int dim = range.getRangeZ( ).size( ) > 1 && !is_projection ? 3 : 2;
 
         String z = dim == 3 ? ", 0.0" : "";
@@ -830,7 +832,7 @@ public class OperettaManager {
      * @param bounds the roi for which we are looking for the intersecting fields
      * @return a List of fields (WellSample s) that intersect with the give Roi
      */
-    private List<WellSample> getIntersectingFields( List<WellSample> fields, Roi bounds ) {
+    public List<WellSample> getIntersectingFields( List<WellSample> fields, Roi bounds ) {
         // Coordinates are in pixels
         // bounds are in pixels
 
