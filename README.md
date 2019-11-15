@@ -27,7 +27,7 @@ Select `Manage Update Sites`
 
 Click on "Add update site"
 
-in the URL column, enter `https://biop.epfl.ch/sites/operetta/`
+in the URL column, enter `https://biop.epfl.ch/update-sites/operetta/`
 
 in the Name column, name it `BIOP Operetta Importer`
 
