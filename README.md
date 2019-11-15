@@ -11,7 +11,10 @@ We are looking for people to test it, so feel free to drop @lacan a line!
 
 ## Documentation
 
-We are hosting the JavaDoc as GitHub pages at https://biop.github.io/ijp-operetta-importer/
+We are hosting the JavaDoc as GitHub pages at 
+https://biop.github.io/ijp-operetta-importer/
+
+The main class you should focus your attention on is [OperettaManager](https://biop.github.io/ijp-operetta-importer/index.html?ch/epfl/biop/operetta/OperettaManager.html)
 
 If you'd like to see some examples on how it can be used, please check the **Scripts** folder. This contains a few Groovy examples on how to call the Operetta Importer API
 
