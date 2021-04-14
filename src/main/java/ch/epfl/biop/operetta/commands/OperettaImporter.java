@@ -125,7 +125,7 @@ public class OperettaImporter extends InteractiveCommand {
                 old_id = id;
             }
 
-            ListChooser.create( opm.getAvailableWellsString( ), selected_wells_string );
+            ListChooser.create( "Wells", opm.getAvailableWellsString( ), selected_wells_string );
 
             selected_wells_str = selected_wells_string.toString( );
 
@@ -144,7 +144,7 @@ public class OperettaImporter extends InteractiveCommand {
                 old_id = id;
             }
 
-            ListChooser.create( opm.getAvailableFieldsString( ), selected_fields_string );
+            ListChooser.create( "Fields", opm.getAvailableFieldsString( ), selected_fields_string );
 
             selected_fields_str = selected_fields_string.toString( );
 
@@ -281,7 +281,7 @@ public class OperettaImporter extends InteractiveCommand {
 
     private List<Integer> getFields( ) {
         if ( selected_fields_string.size() != 0 ) {
-            List<Integer> field_ids = selected_fields_string.stream( ).map( w -> Integer.parseInt( w.trim( ).split( " " )[ 1 ] ) ).collect( Collectors.toList( ) );
+            List<Integer> field_ids = selected_fields_string.stream( ).map( w -> Integer.parseInt( w.trim( ).split( " " )[ 1 ] ) - 1 ).collect( Collectors.toList( ) );
             return field_ids;
         } else {
             return opm.getAvailableFieldIds();
@@ -331,7 +331,7 @@ public class OperettaImporter extends InteractiveCommand {
             return opm.getWell( row, col);
         } ).collect( Collectors.toList());
 
-        List<Integer> field_ids = selected_fields.stream().map( w -> Integer.parseInt( w.trim( ).split( " " )[ 1 ]) ).collect( Collectors.toList());
+        List<Integer> field_ids = selected_fields.stream().map( w -> Integer.parseInt( w.trim( ).split( " " )[ 1 ]) - 1 ).collect( Collectors.toList());
 
 
         Roi roi = parseRoi( roi_bounds );

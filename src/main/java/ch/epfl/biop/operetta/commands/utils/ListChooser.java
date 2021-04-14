@@ -15,15 +15,15 @@ import java.util.Vector;
 import java.util.stream.Collectors;
 
 public class ListChooser {
+
     private static final Logger logger = LoggerFactory.getLogger( ListChooser.class);
 
-    static public void create( final List<String> things, final List<String> selected_things ) {
-
+    static public void create( final String thing_name, final List<String> things, final List<String> selected_things ) {
         final JPanel dialogPanel = new JPanel( );
 
         final BoxLayout col1Layout = new BoxLayout( dialogPanel, BoxLayout.PAGE_AXIS );
 
-        JLabel label = new JLabel( "Select wells to process:", SwingConstants.LEFT );
+        JLabel label = new JLabel( "Select "+thing_name+" to process:", SwingConstants.LEFT );
         label.setAlignmentX( Component.LEFT_ALIGNMENT );
         label.setPreferredSize( new Dimension( 50, 40 ) );
 
@@ -40,7 +40,7 @@ public class ListChooser {
         dialogPanel.add( scroll_list );
 
         final int result = JOptionPane.showConfirmDialog( null, dialogPanel,
-                "Please select one or more wells",
+                "Please select one or more "+thing_name,
                 JOptionPane.OK_CANCEL_OPTION );
 
         if ( result == JOptionPane.OK_OPTION ) {
@@ -96,7 +96,7 @@ public class ListChooser {
         dialogPanel.add(table);
 
         final int result = JOptionPane.showConfirmDialog( null, dialogPanel,
-                "Please select one or more wells",
+                "Please select one or more elements",
                 JOptionPane.OK_CANCEL_OPTION );
 
     }

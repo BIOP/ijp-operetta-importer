@@ -318,7 +318,7 @@ public class OperettaManager {
      * @return the well that matches the provided Row, Column indexes
      */
     public Well getWell( int row, int column ) {
-        Well well = getAvailableWells( ).stream( ).filter( w -> w.getRow( ).getValue( ) == row && w.getColumn( ).getValue( ) == column ).findFirst( ).get( );
+        Well well = getAvailableWells( ).stream( ).filter( w -> w.getRow( ).getValue( ) == row-1 && w.getColumn( ).getValue( ) == column-1 ).findFirst( ).get( );
         log.info( "Well at R{}-C{} is {}", row, column, well.getID( ) );
         return well;
     }
@@ -332,7 +332,7 @@ public class OperettaManager {
         // find one well
         int n_fields = metadata.getWellSampleCount( 0, 0 );
 
-        return IntStream.range( 0, n_fields ).boxed( ).collect( Collectors.toList( ) );
+        return IntStream.range( 1, n_fields+1 ).boxed( ).collect( Collectors.toList( ) );
 
     }
 
@@ -352,7 +352,7 @@ public class OperettaManager {
      * @return the field corresponding to the ID
      */
     public WellSample getField( Well well, int field_id ) {
-        WellSample field = getAvailableSamples( well ).stream( ).filter( s -> s.getIndex( ).getValue( ) == field_id ).findFirst( ).get( );
+        WellSample field = getAvailableSamples( well ).stream( ).filter( s -> s.getIndex( ).getValue( ) == field_id-1 ).findFirst( ).get( );
         log.info( "Field with ID {} is {}", field_id, field.getID( ) );
         return field;
     }
@@ -365,8 +365,8 @@ public class OperettaManager {
      */
     public String getFinalWellImageName( Well well ) {
 
-        int row = well.getRow( ).getValue( );
-        int col = well.getColumn( ).getValue( );
+        int row = well.getRow( ).getValue( )+1;
+        int col = well.getColumn( ).getValue( )+1;
         String project = metadata.getPlateName( 0 );
 
         String name = String.format( "%s - R%d-C%d", project, row, col );
@@ -383,10 +383,10 @@ public class OperettaManager {
      * @return the name of the image related to this Field (in a specific well
      */
     public String getFinalFieldImageName( WellSample field ) {
-        int row = field.getWell( ).getRow( ).getValue( );
-        int col = field.getWell( ).getColumn( ).getValue( );
+        int row = field.getWell( ).getRow( ).getValue( )+1;
+        int col = field.getWell( ).getColumn( ).getValue( )+1;
         String field_id = field.getID( );
-        String local_field_id = field_id.substring( field_id.lastIndexOf( ":" ) + 1 );
+        String local_field_id = field_id.substring( Integer.valueOf( field_id.lastIndexOf( ":" ) ) + 1 );
 
 
         String project = field.getWell( ).getPlate( ).getName( );
@@ -408,7 +408,7 @@ public class OperettaManager {
         int n_fields = (metadata).getWellSampleCount( 0, 0 );
 
         List<String> availableFields = IntStream.range( 0, n_fields ).mapToObj( f -> {
-            String s = "Field " + f;
+            String s = "Field " + (f + 1);
             return s;
         } ).collect( Collectors.toList( ) );
 
@@ -422,8 +422,8 @@ public class OperettaManager {
     public List<String> getAvailableWellsString( ) {
         List<String> wells = getAvailableWells( ).stream( )
                 .map( w -> {
-                    int row = w.getRow( ).getValue( );
-                    int col = w.getColumn( ).getValue( );
+                    int row = w.getRow( ).getValue( )+1;
+                    int col = w.getColumn( ).getValue( )+1;
 
                     return "R" + row + "-C" + col;
 
