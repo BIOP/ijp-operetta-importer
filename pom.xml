@@ -8,17 +8,16 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>27.0.1</version>
-		<relativePath />
+		<version>30.0.0</version>
 	</parent>
 
-	<version>0.1.4</version>
+	<version>0.1.5</version>
 	<repositories>
 	  <!-- NB: for project parent -->
-	  <repository>
-	    <id>imagej.public</id>
-	    <url>http://maven.imagej.net/content/groups/public</url>
-	  </repository>  
+		<repository>
+			<id>scijava.public</id>
+			<url>https://maven.scijava.org/content/groups/public</url>
+		</repository>
 	</repositories>
 	
 	<name>PerkinElmer Operetta Importer</name>
@@ -99,9 +98,8 @@
 		<main-class>Operetta_Importer</main-class>
 		<package-name>ch.epfl.biop.operetta</package-name>
 		<license.copyrightOwners>BIOP</license.copyrightOwners>
-		<scijava.app.directory>C:/Fiji</scijava.app.directory>
+		<scijava.app.directory>C:/Fiji.app</scijava.app.directory>
 		<scijava.app.subdirectory>plugins/BIOP</scijava.app.subdirectory>
-		<scijava-common.version>2.78.0</scijava-common.version>
 	</properties>
 
 	<dependencies>
@@ -119,21 +117,11 @@
 			<groupId>ome</groupId>
 			<artifactId>formats-gpl</artifactId>
 		</dependency>
-
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>fiji-lib</artifactId>
-		</dependency>
-
 		<dependency>
 			<groupId>net.imagej</groupId>
 			<artifactId>imagej</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.scijava</groupId>
-			<artifactId>scijava-ui-swing</artifactId>
-			<version>0.13.0</version>
-		</dependency>
+
 		<dependency>
 			<groupId>net.imglib2</groupId>
 			<artifactId>imglib2-ui</artifactId>
@@ -145,7 +133,6 @@
 		<dependency>
 			<groupId>org.codehaus.groovy</groupId>
 			<artifactId>groovy</artifactId>
-			<version>2.5.8</version>
 		</dependency>
 	</dependencies>
 
