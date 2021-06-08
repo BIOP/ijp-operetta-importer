@@ -6,6 +6,7 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.Overlay;
 import ij.gui.Roi;
+import ij.io.Opener;
 import ij.measure.Calibration;
 import ij.plugin.HyperStackConverter;
 import ij.plugin.ZProjector;
@@ -41,6 +42,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -171,6 +173,8 @@ public class OperettaManager {
 
         private File save_folder = new File( System.getProperty( "user.home" ) );
 
+        private Supplier<IFormatReader> readerSupplier = null;
+
         /**
          * Determines whether the OperettaManager will Z Project the data before saving it, using {@link Builder#setProjectionMethod(String)}
          * @param do_projection true if we wish to perform a Z projection
@@ -221,6 +225,18 @@ public class OperettaManager {
         }
 
         /**
+         * As an alternative to using a id, when the dataset is big, one can provide
+         * a reader supplier, which is a way to optimise the opening of a dataset, as
+         * used in {@link ch.epfl.biop.operetta.bdv.OpenOperettaCommand}
+         * @param readerSupplier the reader supplier
+         * @return a Builder object, to continue building parameters
+         */
+        public Builder readerSupplier( Supplier<IFormatReader> readerSupplier ) {
+            this.readerSupplier = readerSupplier;
+            return this;
+        }
+
+        /**
          * Can provide a range (Channels, Slices and Timepoints) to use for export. If none are provided, will
          * export the full range of the data
          * @param range the HyperRange object, see corresponding class
@@ -254,7 +270,11 @@ public class OperettaManager {
 
             try {
                 // Create the reader
-                reader = OperettaManager.createReader( id.getAbsolutePath( ) );
+                if (readerSupplier==null) {
+                    reader = OperettaManager.createReader(id.getAbsolutePath());
+                } else {
+                    reader = readerSupplier.get();
+                }
                 //log.info( "Current range is {}", range );
                 if ( this.range == null ) {
                     this.range = new HyperRange.Builder( ).fromMetadata( (IMetadata) reader.getMetadataStore( ) ).build( );
@@ -574,11 +594,14 @@ public class OperettaManager {
                     .forEach( i -> {
                         // Check that we want to open it
                         // Infer C Z T from filename
+
                         Map<String, Integer> plane_indexes = range2.getIndexes( files.get( i ) );
                         if ( range2.includes( files.get( i ) ) ) {
-                            ImagePlus imp = IJ.openImage( files.get( i ) );
+                            //IJ.log("files.get( "+i+" )+"+files.get( i ));
+                            ImagePlus imp = (new Opener()).openImage(files.get( i ));// IJ.openImage( files.get( i ) );
                             if (imp == null ) {
                                 log.error( "Could not open {}", files.get( i ) );
+                                //IJ.log( "Could not open "+ files.get( i ) );
                             } else {
                                 ImageProcessor ip = imp.getProcessor( );
                                 if ( do_norm ) {
@@ -593,11 +616,11 @@ public class OperettaManager {
                                 ip = ip.resize( ip.getWidth( ) / downscale, ip.getHeight( ) / downscale );
                                 // logger.info("File {}", files.get( i ));
                                 String label = String.format( "R%d-C%d - (c:%d, z:%d, t:%d) - %s", row, column, plane_indexes.get( "C" ), plane_indexes.get( "Z" ), plane_indexes.get( "T" ), new File( files.get( i ) ).getName( ) );
-
+                                //IJ.log("plane_indexes.get( \"I\" ): " +plane_indexes.get( "I" ));
                                 stack.setProcessor( ip, plane_indexes.get( "I" ) );
                                 stack.setSliceLabel( label, plane_indexes.get( "I" ) );
                                 imp.close( );
-                                // new ImagePlus("", stack).show();
+                                //new ImagePlus("", stack).show();
                             }
                         }
                     } ) ).get( );
@@ -758,7 +781,7 @@ public class OperettaManager {
 
     @Override
     public String toString( ) {
-        return "Operetta Reader on File " + this.id.getName( );
+        return "Operetta File " + this.id.getName( );
     }
 
 
@@ -767,7 +790,7 @@ public class OperettaManager {
      *///////////////////////////////////
 
     /**
-     * writeWellPositionsFile can write the coodrinates of the selected individually saved wells to a file to use with
+     * writeWellPositionsFile can write the coordinates of the selected individually saved wells to a file to use with
      * Plugins &gt; Stitching &gt; Grid/Collection Stitching...
      * @param samples the list of samples (Fields) that will be written to the positions file
      * @param position_file the filename of where the position file will be written

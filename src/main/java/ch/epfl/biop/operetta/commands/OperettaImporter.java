@@ -25,6 +25,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -96,6 +97,9 @@ public class OperettaImporter extends InteractiveCommand {
     @Parameter( label = "Process", callback = "doProcess", persist = false )
     Button process;
 
+    @Parameter( required = false )
+    Supplier<OperettaManager.Builder> opmBuilderSupplier = () -> new OperettaManager.Builder( );
+
     OperettaManager opm;
 
     List<String> selected_wells_string = new ArrayList<>( );
@@ -121,7 +125,7 @@ public class OperettaImporter extends InteractiveCommand {
     private void wellChooser( ) {
         if ( this.id != null ) {
             if ( !this.id.equals( old_id ) ) {
-                opm = new OperettaManager.Builder( ).setId( this.id ).build( );
+                opm = opmBuilderSupplier.get().setId( this.id ).build( );
                 old_id = id;
             }
 
@@ -140,7 +144,7 @@ public class OperettaImporter extends InteractiveCommand {
 
         if ( this.id != null ) {
             if ( !this.id.equals( old_id ) ) {
-                opm = new OperettaManager.Builder( ).setId( this.id ).build( );
+                opm = opmBuilderSupplier.get().setId( this.id ).build( );
                 old_id = id;
             }
 
@@ -165,7 +169,7 @@ public class OperettaImporter extends InteractiveCommand {
 
 
     private void roiChooser( ) {
-        opm = new OperettaManager.Builder( ).setId( this.id )
+        opm = opmBuilderSupplier.get().setId( this.id )
                                             .doProjection( is_projection )
                                             .setProjectionMethod( z_projection_method )
                                             .build( );
@@ -214,7 +218,7 @@ public class OperettaImporter extends InteractiveCommand {
     }
 
     private void roiChooserLazy( ) {
-        opm = new OperettaManager.Builder( ).setId( this.id )
+        opm = opmBuilderSupplier.get().setId( this.id )
                 .doProjection( is_projection )
                 .setProjectionMethod( z_projection_method )
                 .build( );
@@ -288,9 +292,6 @@ public class OperettaImporter extends InteractiveCommand {
         }
     }
 
-
-
-
     public void doProcess( ) {
         HyperRange range = new HyperRange.Builder( )
                 .setRangeC( this.selected_channels_str )
@@ -298,8 +299,7 @@ public class OperettaImporter extends InteractiveCommand {
                 .setRangeT( this.selected_timepoints_str )
                 .build( );
 
-        opm = new OperettaManager
-                .Builder( )
+        opm = opmBuilderSupplier.get()
                 .setId( id )
                 .setRange( range )
                 .setProjectionMethod( this.z_projection_method )

@@ -25,14 +25,17 @@ public class HyperRange {
 
     public void setRangeC( List<Integer> range_c ) {
         this.range_c = range_c;
+        this.imp.setDimensions(range_c.size(), range_z.size(), range_t.size());
     }
 
     public void setRangeZ( List<Integer> range_z ) {
         this.range_z = range_z;
+        this.imp.setDimensions(range_c.size(), range_z.size(), range_t.size());
     }
 
     public void setRangeT( List<Integer> range_t ) {
         this.range_t = range_t;
+        this.imp.setDimensions(range_c.size(), range_z.size(), range_t.size());
     }
 
     HyperRange( List<Integer> range_c, List<Integer> range_z, List<Integer> range_t) {
