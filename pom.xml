@@ -9,6 +9,7 @@
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
 		<version>30.0.0</version>
+		<relativePath/>
 	</parent>
 
 	<version>0.1.5</version>
