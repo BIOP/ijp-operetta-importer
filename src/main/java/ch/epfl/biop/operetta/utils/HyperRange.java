@@ -25,17 +25,20 @@ public class HyperRange {
 
     public void setRangeC( List<Integer> range_c ) {
         this.range_c = range_c;
-        this.imp.setDimensions(range_c.size(), range_z.size(), range_t.size());
+        updateImagePlusPositions();
+
     }
 
     public void setRangeZ( List<Integer> range_z ) {
         this.range_z = range_z;
-        this.imp.setDimensions(range_c.size(), range_z.size(), range_t.size());
+        updateImagePlusPositions();
+
     }
 
     public void setRangeT( List<Integer> range_t ) {
         this.range_t = range_t;
-        this.imp.setDimensions(range_c.size(), range_z.size(), range_t.size());
+        updateImagePlusPositions();
+
     }
 
     HyperRange( List<Integer> range_c, List<Integer> range_z, List<Integer> range_t) {
@@ -44,22 +47,32 @@ public class HyperRange {
         this.range_z = range_z;
         this.range_t = range_t;
 
+        updateImagePlusPositions();
+
+    }
+
+    private void updateImagePlusPositions() {
         ImageStack s = ImageStack.create(1, 1, getTotalPlanes(), 8);
         this.imp = new ImagePlus("", s);
         this.imp.setDimensions(range_c.size(), range_z.size(), range_t.size());
-
     }
 
     public void updateCRange(String new_range) {
         this.range_c = parseString( new_range );
+        updateImagePlusPositions();
+
     }
 
     public void updateZRange(String new_range) {
         this.range_z = parseString(new_range );
+        updateImagePlusPositions();
+
     }
 
     public void updateTRange(String new_range) {
         this.range_t = parseString(new_range);
+        updateImagePlusPositions();
+
     }
 
     public int getTotalPlanes() {

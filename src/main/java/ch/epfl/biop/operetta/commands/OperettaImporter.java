@@ -21,6 +21,7 @@ import org.scijava.plugin.Plugin;
 import org.scijava.widget.Button;
 import org.scijava.widget.FileWidget;
 
+import javax.swing.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -151,8 +152,6 @@ public class OperettaImporter extends InteractiveCommand {
             ListChooser.create( "Fields", opm.getAvailableFieldsString( ), selected_fields_string );
 
             selected_fields_str = selected_fields_string.toString( );
-
-            //wellsUpdate( true );
 
         } else {
             IJ.showMessage( "Image XML file not set" );
@@ -337,10 +336,7 @@ public class OperettaImporter extends InteractiveCommand {
         Roi roi = parseRoi( roi_bounds );
 
         // Write the associated macro command
-
-        opm.process( wells, field_ids, this.downsample, roi, !is_fuse_fields);
-
-
+        new Thread(()->opm.process( wells, field_ids, this.downsample, roi, !is_fuse_fields)).start();
 
     }
 

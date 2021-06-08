@@ -28,6 +28,7 @@ import org.perf4j.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.*;
 import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -35,6 +36,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -739,8 +742,16 @@ public class OperettaManager {
         }
 
         List<WellSample> well_fields;
+        int iWell = 0;
+
+        Instant global_starts = Instant.now();
+
         for ( Well well : wells ) {
+            iWell++;
             log.info( "Well: {}", well );
+            IJ.log("- Well "+well.getID()+" ("+iWell+"/"+wells.size()+" )");//);
+            Instant starts = Instant.now();
+
             if ( fields != null ) {
                 well_fields = fields.stream( ).map( well::getWellSample ).collect( Collectors.toList( ) );
             } else {
@@ -752,8 +763,10 @@ public class OperettaManager {
 
             if ( is_fields_individual ) {
                 Point topleft = getTopLeftCoordinates( well_fields );
-
+                int iField = 0;
                 for ( WellSample field : well_fields ) {
+                    iField++;
+                    IJ.log("\t - Field "+field.getID()+" ("+iField+"/"+well_fields.size()+")");//);
                     ImagePlus field_image = getFieldImage( field, downscale, this.range, null );
                     String name = getFinalFieldImageName( field );
                     if ( field_image != null )
@@ -775,7 +788,12 @@ public class OperettaManager {
                     //well_image.show( );
                 }
             }
+            Instant ends = Instant.now();
+            IJ.log(" - Well processed in "+Duration.between(starts, ends).getSeconds()+" s.");
         }
+
+        Instant global_ends = Instant.now();
+        IJ.log(" DONE! All wells processed in "+(Duration.between(global_starts, global_ends).getSeconds()/60)+" min.");
 
     }
 
