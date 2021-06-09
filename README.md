@@ -1,7 +1,7 @@
 PerkinElmer Operetta Importer Command and API
 ======================================
 
-This is a (beta) new and improved version of the original Operetta Importer Script we had writted in Groovy a couple of years ago.
+This is an improved version of the original Operetta Importer Script we had written in Groovy a couple of years ago.
 
 ## Features
 
@@ -16,20 +16,14 @@ https://biop.github.io/ijp-operetta-importer/
 
 The main class you should focus your attention on is [OperettaManager](https://biop.github.io/ijp-operetta-importer/index.html?ch/epfl/biop/operetta/OperettaManager.html)
 
-If you'd like to see some examples on how it can be used, please check the **Scripts** folder. This contains a few Groovy examples on how to call the Operetta Importer API
+If you'd like to see some examples on how it can be used, please check the [**Scripts**](https://github.com/BIOP/ijp-operetta-importer/tree/master/Scripts) folder. This contains a few Groovy examples on how to call the Operetta Importer API
 
-## Installation
-You can install our Operetta Importer Update site for now:
+## Installation in Fiji
+Go to `Help > Update...`
 
-From Fiji, go to Help > Update > Manage Update Sites
+Click `Manage Update Sites`
 
-Select `Manage Update Sites`
-
-Click on "Add update site"
-
-in the URL column, enter `https://biop.epfl.ch/update-sites/operetta/`
-
-in the Name column, name it `BIOP Operetta Importer`
+Activate the `Operetta Importer` update site.
 
 
 

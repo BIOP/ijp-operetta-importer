@@ -85,10 +85,12 @@
 			<archive>https://forum.image.sc</archive>
 		</mailingList>
 	</mailingLists>
+
 	<issueManagement>
 		<url>https://github.com/BIOP/ijp-operetta-importer/issues</url>
 		<system>GitHub Issues</system>
 	</issueManagement>
+
 	<ciManagement>
 		<system>none</system>
 		<url>none</url>
@@ -106,18 +108,19 @@
 		<license.copyrightOwners>BIOP</license.copyrightOwners>
 		<scijava.app.directory>C:/Fiji.app</scijava.app.directory>
 		<scijava.app.subdirectory>plugins/BIOP</scijava.app.subdirectory>
+		<slf4j-log4j12.version>1.7.5</slf4j-log4j12.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
-			<version>1.7.5</version>
+			<!-- <version>1.7.5</version> -->
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-log4j12</artifactId>
-			<version>1.7.5</version>
+			<version>${slf4j-log4j12.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>ome</groupId>
