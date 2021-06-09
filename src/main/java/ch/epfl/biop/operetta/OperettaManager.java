@@ -12,10 +12,7 @@ import ij.plugin.HyperStackConverter;
 import ij.plugin.ZProjector;
 import ij.process.Blitter;
 import ij.process.ImageProcessor;
-import loci.formats.FormatException;
-import loci.formats.IFormatReader;
-import loci.formats.Memoizer;
-import loci.formats.MetadataTools;
+import loci.formats.*;
 import loci.formats.in.OperettaReader;
 import loci.formats.meta.IMetadata;
 import ome.units.UNITS;
@@ -176,7 +173,7 @@ public class OperettaManager {
 
         private File save_folder = new File( System.getProperty( "user.home" ) );
 
-        private Supplier<IFormatReader> readerSupplier = null;
+        private IFormatReader reader = null;
 
         /**
          * Determines whether the OperettaManager will Z Project the data before saving it, using {@link Builder#setProjectionMethod(String)}
@@ -229,13 +226,12 @@ public class OperettaManager {
 
         /**
          * As an alternative to using a id, when the dataset is big, one can provide
-         * a reader supplier, which is a way to optimise the opening of a dataset, as
-         * used in {@link ch.epfl.biop.operetta.bdv.OpenOperettaCommand}
-         * @param readerSupplier the reader supplier
+         * am already existing reader, which is a way to optimise the opening of a dataset
+         * @param reader the reader
          * @return a Builder object, to continue building parameters
          */
-        public Builder readerSupplier( Supplier<IFormatReader> readerSupplier ) {
-            this.readerSupplier = readerSupplier;
+        public Builder reader( IFormatReader reader ) {
+            this.reader = reader;
             return this;
         }
 
@@ -269,15 +265,13 @@ public class OperettaManager {
         public OperettaManager build( ) {
 
             File id = this.id;
-            IFormatReader reader;
 
             try {
                 // Create the reader
-                if (readerSupplier==null) {
+                if (reader == null) {
                     reader = OperettaManager.createReader(id.getAbsolutePath());
-                } else {
-                    reader = readerSupplier.get();
                 }
+
                 //log.info( "Current range is {}", range );
                 if ( this.range == null ) {
                     this.range = new HyperRange.Builder( ).fromMetadata( (IMetadata) reader.getMetadataStore( ) ).build( );
@@ -854,16 +848,23 @@ public class OperettaManager {
      * @throws IOException an error while reading the data
      * @throws FormatException and error regarding the data's format
      */
-    private static IFormatReader createReader( final String id ) throws IOException, FormatException {
-
-        final IFormatReader imageReader = new OperettaReader( );
-
-        Memoizer memo = new Memoizer( imageReader );
-
-        IMetadata omeMeta = MetadataTools.createOMEXMLMetadata( );
-        memo.setMetadataStore( omeMeta );
-        memo.setId( id );
-
+    public static IFormatReader createReader( final String id ) {
+        log.debug("Getting new reader for " + id);
+        IFormatReader reader = new ImageReader();
+        reader.setFlattenedResolutions(false); // For compatibility with bdv-playground
+        Memoizer memo = new Memoizer(reader);
+        IMetadata omeMetaIdxOmeXml = MetadataTools.createOMEXMLMetadata();
+        memo.setMetadataStore(omeMetaIdxOmeXml);
+        try {
+            log.debug("setId for reader " + id);
+            org.apache.commons.lang.time.StopWatch watch = new org.apache.commons.lang.time.StopWatch();
+            watch.start();
+            memo.setId(id);
+            watch.stop();
+            log.debug("id set in " + (int)(watch.getTime() / 1000L) + " s");
+        } catch (FormatException | IOException e) {
+            e.printStackTrace();
+        }
         return memo;
     }
 
@@ -884,8 +885,6 @@ public class OperettaManager {
         log.info( "Looking for samples intersecting with {}, ", bounds );
 
         // We are selecting bounds
-
-
         imp.getOverlay( ).add( resampleRoi( bounds, 30 ) );
 
         Point topleft = getTopLeftCoordinates( fields );

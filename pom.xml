@@ -140,16 +140,6 @@
 			<groupId>org.codehaus.groovy</groupId>
 			<artifactId>groovy</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>ch.epfl.biop</groupId>
-			<artifactId>bigdataviewer-biop-tools</artifactId>
-			<version>0.2.21-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<groupId>ch.epfl.biop</groupId>
-			<artifactId>bigdataviewer-bioformats</artifactId>
-			<version>0.2.18-SNAPSHOT</version>
-		</dependency>
 	</dependencies>
 
 
