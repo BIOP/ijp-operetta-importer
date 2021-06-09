@@ -9,10 +9,15 @@
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
 		<version>30.0.0</version>
-		<relativePath/>
+		<relativePath />
 	</parent>
 
-	<version>0.1.5</version>
+	<groupId>ch.epfl.biop</groupId>
+	<artifactId>Operetta_Importer</artifactId>
+	<version>0.1.6-SNAPSHOT</version>
+
+	<description>Hold your horses</description>
+
 	<repositories>
 	  <!-- NB: for project parent -->
 		<repository>
@@ -137,7 +142,5 @@
 		</dependency>
 	</dependencies>
 
-	<groupId>ch.epfl.biop</groupId>
-	<artifactId>Operetta_Importer</artifactId>
-	<description>Hold your horses</description>
+
 </project>

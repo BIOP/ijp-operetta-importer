@@ -6,15 +6,13 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.Overlay;
 import ij.gui.Roi;
+import ij.io.Opener;
 import ij.measure.Calibration;
 import ij.plugin.HyperStackConverter;
 import ij.plugin.ZProjector;
 import ij.process.Blitter;
 import ij.process.ImageProcessor;
-import loci.formats.FormatException;
-import loci.formats.IFormatReader;
-import loci.formats.Memoizer;
-import loci.formats.MetadataTools;
+import loci.formats.*;
 import loci.formats.in.OperettaReader;
 import loci.formats.meta.IMetadata;
 import ome.units.UNITS;
@@ -27,6 +25,7 @@ import org.perf4j.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.*;
 import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -34,6 +33,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -41,6 +42,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -171,6 +173,8 @@ public class OperettaManager {
 
         private File save_folder = new File( System.getProperty( "user.home" ) );
 
+        private IFormatReader reader = null;
+
         /**
          * Determines whether the OperettaManager will Z Project the data before saving it, using {@link Builder#setProjectionMethod(String)}
          * @param do_projection true if we wish to perform a Z projection
@@ -221,6 +225,17 @@ public class OperettaManager {
         }
 
         /**
+         * As an alternative to using a id, when the dataset is big, one can provide
+         * am already existing reader, which is a way to optimise the opening of a dataset
+         * @param reader the reader
+         * @return a Builder object, to continue building parameters
+         */
+        public Builder reader( IFormatReader reader ) {
+            this.reader = reader;
+            return this;
+        }
+
+        /**
          * Can provide a range (Channels, Slices and Timepoints) to use for export. If none are provided, will
          * export the full range of the data
          * @param range the HyperRange object, see corresponding class
@@ -250,11 +265,13 @@ public class OperettaManager {
         public OperettaManager build( ) {
 
             File id = this.id;
-            IFormatReader reader;
 
             try {
                 // Create the reader
-                reader = OperettaManager.createReader( id.getAbsolutePath( ) );
+                if (reader == null) {
+                    reader = OperettaManager.createReader(id.getAbsolutePath());
+                }
+
                 //log.info( "Current range is {}", range );
                 if ( this.range == null ) {
                     this.range = new HyperRange.Builder( ).fromMetadata( (IMetadata) reader.getMetadataStore( ) ).build( );
@@ -574,11 +591,14 @@ public class OperettaManager {
                     .forEach( i -> {
                         // Check that we want to open it
                         // Infer C Z T from filename
+
                         Map<String, Integer> plane_indexes = range2.getIndexes( files.get( i ) );
                         if ( range2.includes( files.get( i ) ) ) {
-                            ImagePlus imp = IJ.openImage( files.get( i ) );
+                            //IJ.log("files.get( "+i+" )+"+files.get( i ));
+                            ImagePlus imp = (new Opener()).openImage(files.get( i ));// IJ.openImage( files.get( i ) );
                             if (imp == null ) {
                                 log.error( "Could not open {}", files.get( i ) );
+                                //IJ.log( "Could not open "+ files.get( i ) );
                             } else {
                                 ImageProcessor ip = imp.getProcessor( );
                                 if ( do_norm ) {
@@ -593,11 +613,11 @@ public class OperettaManager {
                                 ip = ip.resize( ip.getWidth( ) / downscale, ip.getHeight( ) / downscale );
                                 // logger.info("File {}", files.get( i ));
                                 String label = String.format( "R%d-C%d - (c:%d, z:%d, t:%d) - %s", row, column, plane_indexes.get( "C" ), plane_indexes.get( "Z" ), plane_indexes.get( "T" ), new File( files.get( i ) ).getName( ) );
-
+                                //IJ.log("plane_indexes.get( \"I\" ): " +plane_indexes.get( "I" ));
                                 stack.setProcessor( ip, plane_indexes.get( "I" ) );
                                 stack.setSliceLabel( label, plane_indexes.get( "I" ) );
                                 imp.close( );
-                                // new ImagePlus("", stack).show();
+                                //new ImagePlus("", stack).show();
                             }
                         }
                     } ) ).get( );
@@ -716,8 +736,16 @@ public class OperettaManager {
         }
 
         List<WellSample> well_fields;
+        int iWell = 0;
+
+        Instant global_starts = Instant.now();
+
         for ( Well well : wells ) {
+            iWell++;
             log.info( "Well: {}", well );
+            IJ.log("- Well "+well.getID()+" ("+iWell+"/"+wells.size()+" )");//);
+            Instant starts = Instant.now();
+
             if ( fields != null ) {
                 well_fields = fields.stream( ).map( well::getWellSample ).collect( Collectors.toList( ) );
             } else {
@@ -729,8 +757,10 @@ public class OperettaManager {
 
             if ( is_fields_individual ) {
                 Point topleft = getTopLeftCoordinates( well_fields );
-
+                int iField = 0;
                 for ( WellSample field : well_fields ) {
+                    iField++;
+                    IJ.log("\t - Field "+field.getID()+" ("+iField+"/"+well_fields.size()+")");//);
                     ImagePlus field_image = getFieldImage( field, downscale, this.range, null );
                     String name = getFinalFieldImageName( field );
                     if ( field_image != null )
@@ -752,13 +782,18 @@ public class OperettaManager {
                     //well_image.show( );
                 }
             }
+            Instant ends = Instant.now();
+            IJ.log(" - Well processed in "+Duration.between(starts, ends).getSeconds()+" s.");
         }
+
+        Instant global_ends = Instant.now();
+        IJ.log(" DONE! All wells processed in "+(Duration.between(global_starts, global_ends).getSeconds()/60)+" min.");
 
     }
 
     @Override
     public String toString( ) {
-        return "Operetta Reader on File " + this.id.getName( );
+        return "Operetta File " + this.id.getName( );
     }
 
 
@@ -767,7 +802,7 @@ public class OperettaManager {
      *///////////////////////////////////
 
     /**
-     * writeWellPositionsFile can write the coodrinates of the selected individually saved wells to a file to use with
+     * writeWellPositionsFile can write the coordinates of the selected individually saved wells to a file to use with
      * Plugins &gt; Stitching &gt; Grid/Collection Stitching...
      * @param samples the list of samples (Fields) that will be written to the positions file
      * @param position_file the filename of where the position file will be written
@@ -813,16 +848,23 @@ public class OperettaManager {
      * @throws IOException an error while reading the data
      * @throws FormatException and error regarding the data's format
      */
-    private static IFormatReader createReader( final String id ) throws IOException, FormatException {
-
-        final IFormatReader imageReader = new OperettaReader( );
-
-        Memoizer memo = new Memoizer( imageReader );
-
-        IMetadata omeMeta = MetadataTools.createOMEXMLMetadata( );
-        memo.setMetadataStore( omeMeta );
-        memo.setId( id );
-
+    public static IFormatReader createReader( final String id ) {
+        log.debug("Getting new reader for " + id);
+        IFormatReader reader = new ImageReader();
+        reader.setFlattenedResolutions(false); // For compatibility with bdv-playground
+        Memoizer memo = new Memoizer(reader);
+        IMetadata omeMetaIdxOmeXml = MetadataTools.createOMEXMLMetadata();
+        memo.setMetadataStore(omeMetaIdxOmeXml);
+        try {
+            log.debug("setId for reader " + id);
+            org.apache.commons.lang.time.StopWatch watch = new org.apache.commons.lang.time.StopWatch();
+            watch.start();
+            memo.setId(id);
+            watch.stop();
+            log.debug("id set in " + (int)(watch.getTime() / 1000L) + " s");
+        } catch (FormatException | IOException e) {
+            e.printStackTrace();
+        }
         return memo;
     }
 
@@ -843,8 +885,6 @@ public class OperettaManager {
         log.info( "Looking for samples intersecting with {}, ", bounds );
 
         // We are selecting bounds
-
-
         imp.getOverlay( ).add( resampleRoi( bounds, 30 ) );
 
         Point topleft = getTopLeftCoordinates( fields );
