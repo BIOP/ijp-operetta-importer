@@ -325,6 +325,6 @@ public class OperettaImporterInteractive extends InteractiveCommand {
         ij.ui( ).showUI( );
 
         // invoke the plugin
-        ij.command( ).run( OperettaImporterInteractive.class, true );
+        ij.command( ).run( OperettaImporter.class, true );
     }
 }
