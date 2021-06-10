@@ -370,7 +370,7 @@ public class OperettaManager {
      */
     public WellSample getField( Well well, int field_id ) {
         System.out.println("field_id="+field_id);
-        WellSample field = getAvailableSamples( well ).stream( ).filter( s -> s.getIndex( ).getValue( ) == field_id -1).findFirst( ).get( );
+        WellSample field = getAvailableSamples( well ).stream( ).filter( s -> s.getIndex( ).getValue( ) == field_id ).findFirst( ).get( );
         log.info( "Field with ID {} is {}", field_id, field.getID( ) );
         return field;
     }
