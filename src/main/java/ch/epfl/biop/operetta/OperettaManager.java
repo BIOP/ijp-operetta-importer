@@ -783,11 +783,10 @@ public class OperettaManager {
             if (region != null)  well_fields = getIntersectingFields( well_fields, region );
 
             if ( is_fields_individual ) {
-                Point topleft = getTopLeftCoordinates( well_fields );
+                //Point topleft = getTopLeftCoordinates( well_fields );
                 AtomicInteger iField = new AtomicInteger();
                 for ( WellSample field : well_fields ) {
                     iField.incrementAndGet();
-                    Instant field_start = Instant.now();
                     IJ.log("\t - Field "+field.getID()+" ("+iField+"/"+well_fields.size()+")");//);
                     ImagePlus field_image = getFieldImage( field, downscale, this.range, null );
                     String name = getFinalFieldImageName( field );
@@ -808,7 +807,6 @@ public class OperettaManager {
                 String name = getFinalWellImageName( well );
                 if ( well_image != null ) {
                     IJ.saveAsTiff( well_image, new File( save_folder, name + ".tif" ).getAbsolutePath( ) );
-                    //well_image.show( );
                 }
             }
             Instant ends = Instant.now();
