@@ -13,7 +13,6 @@ import ij.plugin.ZProjector;
 import ij.process.Blitter;
 import ij.process.ImageProcessor;
 import loci.formats.*;
-import loci.formats.in.OperettaReader;
 import loci.formats.meta.IMetadata;
 import ome.units.UNITS;
 import ome.units.quantity.Length;
@@ -25,7 +24,6 @@ import org.perf4j.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.*;
 import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -35,6 +33,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -710,7 +712,6 @@ public class OperettaManager {
             }
         } );
 
-
         return wellStack;
 
     }
@@ -723,6 +724,26 @@ public class OperettaManager {
      */
     public void process( int downscale, Roi region, boolean is_fields_individual ) {
         process( null, null, downscale, region, is_fields_individual );
+    }
+
+    public static void printTimingMessage(Instant start, double percentageCompleteness) {
+        long s = Duration.between(start, Instant.now()).getSeconds();
+        String elapsedTime = String.format("%d:%02d:%02d", s / 3600, (s % 3600) / 60, (s % 60));
+        double sPerPC = s/percentageCompleteness;
+        long sRemaining = (long)((100-percentageCompleteness)*sPerPC);
+        String remainingTime = String.format("%d:%02d:%02d", sRemaining / 3600, (sRemaining % 3600) / 60, (sRemaining % 60));
+        LocalDateTime estimateDoneJob =  LocalDateTime.now().plus(Duration.ofSeconds(sRemaining));
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        long nDays = sRemaining/(3600*24);
+        String daysMessage = "";
+        if (nDays == 1) {
+            daysMessage+=" tomorrow.";
+        }
+        if (nDays == 1) {
+            daysMessage+=" in "+nDays+" days.";
+        }
+        String formatDateTime = estimateDoneJob.format(formatter);
+        IJ.log(" -  Task "+(int)(percentageCompleteness)+" % completed. Elapsed time:"+elapsedTime+". Estimated remaining time: "+remainingTime+". Job done at around "+formatDateTime+daysMessage);
     }
 
     /**
@@ -741,15 +762,16 @@ public class OperettaManager {
         }
 
         List<WellSample> well_fields;
-        int iWell = 0;
+        AtomicInteger iWell = new AtomicInteger();
 
-        Instant global_starts = Instant.now();
+        Instant global_start = Instant.now();
+
+        double percentageCompleteness = 0;
 
         for ( Well well : wells ) {
-            iWell++;
             log.info( "Well: {}", well );
             IJ.log("- Well "+well.getID()+" ("+iWell+"/"+wells.size()+" )");//);
-            Instant starts = Instant.now();
+            Instant well_start = Instant.now();
 
             if ( fields != null ) {
                 well_fields = fields.stream( ).map( well::getWellSample ).collect( Collectors.toList( ) );
@@ -762,14 +784,17 @@ public class OperettaManager {
 
             if ( is_fields_individual ) {
                 Point topleft = getTopLeftCoordinates( well_fields );
-                int iField = 0;
+                AtomicInteger iField = new AtomicInteger();
                 for ( WellSample field : well_fields ) {
-                    iField++;
+                    iField.incrementAndGet();
+                    Instant field_start = Instant.now();
                     IJ.log("\t - Field "+field.getID()+" ("+iField+"/"+well_fields.size()+")");//);
                     ImagePlus field_image = getFieldImage( field, downscale, this.range, null );
                     String name = getFinalFieldImageName( field );
                     if ( field_image != null )
                         IJ.saveAsTiff( field_image, new File( save_folder, name + ".tif" ).getAbsolutePath( ) );
+                    percentageCompleteness = (iWell.get()/(double)wells.size() + iField.get()/(double)(well_fields.size()*wells.size())) * 100;
+                    printTimingMessage(global_start, percentageCompleteness);
                 }
                 // Save the positions file
                 // Get the positions that were used, just compute them again
@@ -778,7 +803,6 @@ public class OperettaManager {
                 } catch ( IOException e ) {
                     e.printStackTrace( );
                 }
-
             } else {
                 ImagePlus well_image = getWellImage( well, well_fields, downscale, this.range, region );
                 String name = getFinalWellImageName( well );
@@ -788,11 +812,14 @@ public class OperettaManager {
                 }
             }
             Instant ends = Instant.now();
-            IJ.log(" - Well processed in "+Duration.between(starts, ends).getSeconds()+" s.");
+            IJ.log(" - Well processed in "+Duration.between(well_start, ends).getSeconds()+" s.");
+            iWell.incrementAndGet();
+            percentageCompleteness = (iWell.get()/(double)wells.size()) * 100;
+            printTimingMessage(global_start, percentageCompleteness);
         }
 
         Instant global_ends = Instant.now();
-        IJ.log(" DONE! All wells processed in "+(Duration.between(global_starts, global_ends).getSeconds()/60)+" min.");
+        IJ.log(" DONE! All wells processed in "+(Duration.between(global_start, global_ends).getSeconds()/60)+" min.");
 
     }
 
