@@ -16,17 +16,8 @@
 	<artifactId>Operetta_Importer</artifactId>
 	<version>0.1.6-SNAPSHOT</version>
 
-	<description>Hold your horses</description>
-
-	<repositories>
-	  <!-- NB: for project parent -->
-		<repository>
-			<id>scijava.public</id>
-			<url>https://maven.scijava.org/content/groups/public</url>
-		</repository>
-	</repositories>
-	
 	<name>PerkinElmer Operetta Importer</name>
+	<description>Hold your horses</description>
 	<url>https://imagej.net/Operetta_Importer</url>
 	<inceptionYear>2019</inceptionYear>
 	<organization>
@@ -40,6 +31,15 @@
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
+
+	<repositories>
+	  <!-- NB: for project parent -->
+		<repository>
+			<id>scijava.public</id>
+			<url>https://maven.scijava.org/content/groups/public</url>
+		</repository>
+	</repositories>
+
 	<developers>
 		<developer>
 			<id>oburri</id>
@@ -91,15 +91,17 @@
 		<system>GitHub Issues</system>
 	</issueManagement>
 
-	<ciManagement>
-		<system>none</system>
-		<url>none</url>
-	</ciManagement>
-
 	<scm>
-		<tag>HEAD</tag>
+		<connection>scm:git:git://github.com/BIOP/ijp-operetta-importer</connection>
+		<developerConnection>scm:git:git@github.com:BIOP/ijp-operetta-importer</developerConnection>
 		<url>https://github.com/BIOP/ijp-operetta-importer.git</url>
+		<tag>HEAD</tag>
 	</scm>
+
+	<ciManagement>
+		<system>Travis CI</system>
+		<url>https://travis-ci.com/BIOP/ijp-operetta-importer</url>
+	</ciManagement>
 
 	<properties>
 		<license.licenseName>gpl_v3</license.licenseName>
@@ -109,6 +111,10 @@
 		<scijava.app.directory>C:/Fiji.app</scijava.app.directory>
 		<scijava.app.subdirectory>plugins/BIOP</scijava.app.subdirectory>
 		<slf4j-log4j12.version>1.7.5</slf4j-log4j12.version>
+		<license.excludes>**/resources/**</license.excludes>
+
+		<!-- NB: Deploy releases to the SciJava Maven repository. -->
+		<releaseProfiles>deploy-to-scijava</releaseProfiles>
 	</properties>
 
 	<dependencies>
