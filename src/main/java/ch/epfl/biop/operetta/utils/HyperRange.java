@@ -153,7 +153,7 @@ public class HyperRange {
 
         return this;
     }
-    public static List<Integer> parseString(String s) {
+    public static List<Integer> parseString(String s) throws NumberFormatException {
         // first split by commas
         List<Integer> range = new ArrayList<>();
 

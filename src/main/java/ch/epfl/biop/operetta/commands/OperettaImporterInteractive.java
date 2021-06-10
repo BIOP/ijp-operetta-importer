@@ -4,6 +4,7 @@ import ch.epfl.biop.operetta.OperettaManager;
 import ch.epfl.biop.operetta.commands.utils.ListChooser;
 import ch.epfl.biop.operetta.commands.utils.TiledCellReader;
 import ch.epfl.biop.operetta.utils.HyperRange;
+import com.mchange.lang.StringUtils;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Roi;
@@ -22,6 +23,7 @@ import org.scijava.widget.Button;
 import org.scijava.widget.FileWidget;
 
 import java.io.File;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -32,25 +34,25 @@ import java.util.stream.Collectors;
 @Plugin( type = Command.class )
 public class OperettaImporterInteractive extends InteractiveCommand {
 
-    @Parameter( label = "Downsample Factor" )
+    @Parameter( label = "Downsample Factor", callback = "updateMessage")
     int downsample = 4;
 
-    @Parameter( label = "Selected Wells. Leave blank for all", required = false )
+    @Parameter( label = "Selected Wells. Leave blank for all", callback = "updateMessage", required = false )
     private String selected_wells_str = "";
 
     @Parameter( label = "Choose Wells", callback = "wellChooser", required = false, persist = false)
     private Button chooseWells;
 
-    @Parameter( label = "Selected Fields. Leave blank for all", required = false )
+    @Parameter( label = "Selected Fields. Leave blank for all", callback = "updateMessage", required = false )
     private String selected_fields_str = "";
 
-    @Parameter( label = "Fuse Fields", required = false )
+    @Parameter( label = "Fuse Fields",  callback = "updateMessage", required = false )
     private boolean is_fuse_fields = true;
 
     @Parameter( label = "Choose Fields", callback = "fieldChooser", required = false, persist = false )
     private Button chooseFields;
 
-    @Parameter( label = "Roi Coordinates [x,y,w,h]. . Leave blank for full image", required = false )
+    @Parameter( label = "Roi Coordinates [x,y,w,h]. . Leave blank for full image", callback = "updateMessage", required = false )
     private String roi_bounds = "";
 
     @Parameter( label = "Open Well Slice", callback = "roiChooser", required = false, persist = false )
@@ -59,22 +61,22 @@ public class OperettaImporterInteractive extends InteractiveCommand {
     @Parameter( label = "Get Roi From Open Well", callback = "roiSelector", required = false, persist = false )
     private Button selectRoi;
 
-    @Parameter( label = "Select Range", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
+    @Parameter( label = "Select Range", callback = "updateMessage", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String range = "You can use commas or colons to separate ranges. eg. '1:10' or '1,3,5,8' ";
 
-    @Parameter( label = "Selected Channels. Leave blank for all", required = false )
+    @Parameter( label = "Selected Channels. Leave blank for all", callback = "updateMessage", required = false )
     private String selected_channels_str = "";
 
-    @Parameter( label = "Selected Slices. Leave blank for all", required = false )
+    @Parameter( label = "Selected Slices. Leave blank for all", callback = "updateMessage", required = false )
     private String selected_slices_str = "";
 
-    @Parameter( label = "Selected Timepoints. Leave blank for all", required = false )
+    @Parameter( label = "Selected Timepoints. Leave blank for all", callback = "updateMessage", required = false )
     private String selected_timepoints_str = "";
 
-    @Parameter( label = "Perform Projection of Data" )
+    @Parameter( label = "Perform Projection of Data", callback = "updateMessage" )
     boolean is_projection = false;
 
-    @Parameter( label = "Projection Type", choices = {"Average Intensity", "Max Intensity", "Min Intensity", "Sum Slices", "Standard Deviation", "Median"} )
+    @Parameter( label = "Projection Type", callback = "updateMessage",  choices = {"Average Intensity", "Max Intensity", "Min Intensity", "Sum Slices", "Standard Deviation", "Median"} )
     String z_projection_method = "Max Intensity";
 
     @Parameter( label = "Save Directory", style = FileWidget.DIRECTORY_STYLE )
@@ -89,6 +91,9 @@ public class OperettaImporterInteractive extends InteractiveCommand {
     @Parameter( label = "Max Value" )
     Integer norm_max = (int) Math.pow( 2, 16 ) - 1;
 
+    @Parameter(visibility = ItemVisibility.MESSAGE, persist = false, style = "message")
+    String taskSummary = getMessage(0,0,"");
+
     @Parameter( label = "Process", callback = "doProcess", persist = false )
     Button process;
 
@@ -102,6 +107,105 @@ public class OperettaImporterInteractive extends InteractiveCommand {
 
     private ImagePlus roiImage;
 
+    private String getMessage(long bytes_in, long bytes_out, String name) {
+        DecimalFormat df = new DecimalFormat("#0.0");
+
+        double gb_in = ((double)bytes_in)/(1024*1024*1024);
+        double gb_out = ((double)bytes_out)/(1024*1024*1024);
+
+        double theo_min_time_minutes = ((gb_in+gb_out) / (128.0/1024.0))/ 60.0;
+
+
+        String message =  "<html>"// Process task: <br/>"
+                +"<p>Operetta Dataset "+name+"<ul>";
+
+        if (gb_in<0.1) {
+            message +="<li>Read: less than 100 Mb</li>";
+        } else {
+            message +="<li>Read: "+df.format(gb_in)+" Gb</li>";
+        }
+
+        if (gb_out<0.1) {
+            message +="<li>Write: less than 100 Mb</li>";
+        } else {
+            message +="<li>Write: "+df.format(gb_out)+" Gb</li></ul>";
+        }
+
+        if (theo_min_time_minutes<1) {
+            message += "Theoretical minimal duration on Gb connection: below 1 min."
+                    +"</html>";
+        } else {
+
+            if (theo_min_time_minutes>60) {
+                DecimalFormat df2 = new DecimalFormat("#0");
+                int nHours = (int) (theo_min_time_minutes/60);
+                double nMin = theo_min_time_minutes-60*nHours;
+                message += "Theoretical limit minimal duration on Gb connection: "+nHours+"h "+df2.format(nMin)+" min.<br>";
+                nHours = (int) (theo_min_time_minutes*4/60);
+                nMin = theo_min_time_minutes*4-60*nHours;
+                message += "Estimated duration on Gb connection: "+nHours+"h "+df2.format(nMin)+" min." // A la louche ;-)
+                        +"</html>";
+            } else {
+                message += "Theoretical limit minimal duration on Gb connection: "+df.format(theo_min_time_minutes)+" min.<br>";
+                message += "Estimated duration on Gb connection: "+df.format(theo_min_time_minutes*4)+" min." // A la louche ;-)
+                        +"</html>";
+            }
+
+        }
+
+        return message;
+    }
+
+    private void updateMessage() {
+        try {
+            HyperRange range = new HyperRange.Builder()
+                    .setRangeC(this.selected_channels_str)
+                    .setRangeZ(this.selected_slices_str)
+                    .setRangeT(this.selected_timepoints_str)
+                    .build();
+
+            opm = opmBuilder
+                    .setRange(range)
+                    .setProjectionMethod(this.z_projection_method)
+                    .doProjection(this.is_projection)
+                    .setSaveFolder(this.save_directory)
+                    .setNormalization(norm_min, norm_max)
+                    .build();
+
+            List<String> selected_wells = opm.getAvailableWellsString( );
+            List<String> selected_fields = opm.getAvailableFieldsString( );
+
+
+            if (!selected_wells_str.equals( "" )) {
+                selected_wells = stringToList( selected_wells_str );
+            }
+
+
+            if (!selected_fields_str.equals( "" )) {
+                selected_fields = stringToList( selected_fields_str );
+            }
+
+            // Get the actual field and well ids
+            List<Well> wells = selected_wells.stream().map( w -> {
+                int row = getRow( w );
+                int col = getColumn( w );
+                return opm.getWell( row, col);
+            } ).collect( Collectors.toList());
+
+            List<Integer> field_ids = selected_fields.stream().map( w -> Integer.parseInt( w.trim( ).split( " " )[ 1 ]) - 1 ).collect( Collectors.toList());
+
+            Roi roi = parseRoi( roi_bounds );
+
+            long[] bytes = opm.getIOBytes(wells, field_ids, this.downsample, roi, !is_fuse_fields);
+
+            taskSummary = getMessage(bytes[0], bytes[1], opm.getPlateName());
+
+        } catch (Exception e) {
+            taskSummary = "Error "+e.getMessage();
+        }
+
+    }
+
     private void roiSelector( ) {
         if ( this.roiImage != null ) {
             Roi roi = this.roiImage.getRoi( );
@@ -114,18 +218,21 @@ public class OperettaImporterInteractive extends InteractiveCommand {
                         roi.getBounds( ).height * 8 );
             }
         }
+        updateMessage();
     }
 
     private void wellChooser( ) {
         opm = opmBuilder.build( );
         ListChooser.create( "Wells", opm.getAvailableWellsString( ), selected_wells_string );
         selected_wells_str = selected_wells_string.toString( );
+        updateMessage();
     }
 
     private void fieldChooser( ) {
         opm = opmBuilder.build( );
         ListChooser.create( "Fields", opm.getAvailableFieldsString( ), selected_fields_string );
         selected_fields_str = selected_fields_string.toString( );
+        updateMessage();
     }
 
     private List<String> stringToList( String str ) {
@@ -182,7 +289,7 @@ public class OperettaImporterInteractive extends InteractiveCommand {
         }
         sample.show( );
         this.roiImage = sample;
-
+        updateMessage();
     }
 
     private void roiChooserLazy( ) {
@@ -299,7 +406,6 @@ public class OperettaImporterInteractive extends InteractiveCommand {
         } ).collect( Collectors.toList());
 
         List<Integer> field_ids = selected_fields.stream().map( w -> Integer.parseInt( w.trim( ).split( " " )[ 1 ]) - 1 ).collect( Collectors.toList());
-
 
         Roi roi = parseRoi( roi_bounds );
 

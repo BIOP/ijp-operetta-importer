@@ -369,7 +369,8 @@ public class OperettaManager {
      * @return the field corresponding to the ID
      */
     public WellSample getField( Well well, int field_id ) {
-        WellSample field = getAvailableSamples( well ).stream( ).filter( s -> s.getIndex( ).getValue( ) == field_id-1 ).findFirst( ).get( );
+        System.out.println("field_id="+field_id);
+        WellSample field = getAvailableSamples( well ).stream( ).filter( s -> s.getIndex( ).getValue( ) == field_id -1).findFirst( ).get( );
         log.info( "Field with ID {} is {}", field_id, field.getID( ) );
         return field;
     }
@@ -392,6 +393,10 @@ public class OperettaManager {
             name += "_Projected";
         return name;
 
+    }
+
+    public String getPlateName() {
+        return metadata.getPlateName( 0 );
     }
 
     /**
@@ -789,6 +794,33 @@ public class OperettaManager {
         Instant global_ends = Instant.now();
         IJ.log(" DONE! All wells processed in "+(Duration.between(global_starts, global_ends).getSeconds()/60)+" min.");
 
+    }
+
+    /**
+     * TODO : fix estimation of output bytes - check if this is correct
+     * @return number of bytes that will be read from the dataset and written to the export folder when calling {@link OperettaManager#process(List, List, int, Roi, boolean)}
+     */
+    public long[] getIOBytes(List<Well> wells, List<Integer> fields, int downscale, Roi region, boolean is_fields_individual) {
+
+        long nWells = wells.size();
+        long nFields = fields.size();
+        long nTotalPlanes = range.getTotalPlanes(); // c / z / t
+        long sX = main_reader.getSizeX( );
+        long sY = main_reader.getSizeY( );
+
+        // Output : more complicated
+        // nWells is identical
+
+        long nFieldsOut = nFields;
+
+        //long nTotalPlanesOut = range.getTotalPlanes(); // c / z / t
+        long sXOut = main_reader.getSizeX( )/downscale;
+        long sYOut = main_reader.getSizeY( )/downscale;
+        long sZOut = is_projection?1:getRange().getRangeZ().size();
+        long sCOut = getRange().getRangeC().size();
+        long sTOut = getRange().getRangeT().size();
+
+        return new long[]{sX*sY*nTotalPlanes*nFields*nWells*(long)2, sXOut*sYOut*sZOut*sCOut*sTOut*nFieldsOut*nWells*(long)2}; // Assuming 16 bits images
     }
 
     @Override
