@@ -823,6 +823,11 @@ public class OperettaManager {
 
     /**
      * TODO : fix estimation of output bytes - check if this is correct
+     * @param wells all the Wells to process as a list
+     * @param fields all the Field IDs to process, as a list, set to null to process all
+     * @param downscale the downscale factor
+     * @param region an optional Roi to export, set to null for whole image
+     * @param is_fields_individual export each field individually or as a stitched well
      * @return number of bytes that will be read from the dataset and written to the export folder when calling {@link OperettaManager#process(List, List, int, Roi, boolean)}
      */
     public long[] getIOBytes(List<Well> wells, List<Integer> fields, int downscale, Roi region, boolean is_fields_individual) {
@@ -905,23 +910,19 @@ public class OperettaManager {
      * @throws IOException an error while reading the data
      * @throws FormatException and error regarding the data's format
      */
-    public static IFormatReader createReader( final String id ) {
+    public static IFormatReader createReader( final String id ) throws IOException, FormatException {
         log.debug("Getting new reader for " + id);
         IFormatReader reader = new ImageReader();
         reader.setFlattenedResolutions(false); // For compatibility with bdv-playground
         Memoizer memo = new Memoizer(reader);
         IMetadata omeMetaIdxOmeXml = MetadataTools.createOMEXMLMetadata();
         memo.setMetadataStore(omeMetaIdxOmeXml);
-        try {
             log.debug("setId for reader " + id);
             org.apache.commons.lang.time.StopWatch watch = new org.apache.commons.lang.time.StopWatch();
             watch.start();
             memo.setId(id);
             watch.stop();
             log.debug("id set in " + (int)(watch.getTime() / 1000L) + " s");
-        } catch (FormatException | IOException e) {
-            e.printStackTrace();
-        }
         return memo;
     }
 

@@ -2,6 +2,7 @@ package ch.epfl.biop.operetta.commands;
 
 import ch.epfl.biop.operetta.OperettaManager;
 import ij.IJ;
+import loci.formats.FormatException;
 import loci.formats.IFormatReader;
 import org.apache.commons.io.FileUtils;
 import org.scijava.ItemVisibility;
@@ -11,6 +12,7 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 import java.io.File;
+import java.io.IOException;
 
 /**
  * Entry point to command {@link OperettaImporterInteractive}.
@@ -59,7 +61,15 @@ public class OperettaImporter implements Command {
         }
 
         final IFormatReader[] reader = new IFormatReader[1];
-        Thread t = new Thread(() -> reader[0] = OperettaManager.createReader(f.getAbsolutePath()));
+        Thread t = new Thread(() -> {
+            try {
+                reader[0] = OperettaManager.createReader(f.getAbsolutePath());
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (FormatException e) {
+                e.printStackTrace();
+            }
+        });
 
         t.start();
         int countSeconds = 0;
@@ -76,12 +86,16 @@ public class OperettaImporter implements Command {
             }
         }
 
-        IJ.log("Done! Opening the dataset took "+countSeconds+" s.");
+        if (reader[0]==null) {
+            IJ.log("Error during reader creation, please retry or post your issue in forum.image.sc.");
+        } else {
+            IJ.log("Done! Opening the dataset took "+countSeconds+" s.");
 
-        OperettaManager.Builder opmBuilder =  new OperettaManager.Builder()
-                .reader(reader[0]);
+            OperettaManager.Builder opmBuilder =  new OperettaManager.Builder()
+                    .reader(reader[0]);
 
-        cs.run(OperettaImporterInteractive.class,true,      "opmBuilder", opmBuilder);
+            cs.run(OperettaImporterInteractive.class,true,      "opmBuilder", opmBuilder);
+        }
 
     }
 }
