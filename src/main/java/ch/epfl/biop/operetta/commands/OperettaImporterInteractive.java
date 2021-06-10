@@ -132,26 +132,30 @@ public class OperettaImporterInteractive extends InteractiveCommand {
         }
 
         if (theo_min_time_minutes<1) {
-            message += "Theoretical minimal duration on Gb connection: below 1 min."
-                    +"</html>";
+            message += "Theoretical minimal duration on Gb connection: below 1 min.<br>";
+        } else if (theo_min_time_minutes>60) {
+            DecimalFormat df2 = new DecimalFormat("#0");
+            int nHours = (int) (theo_min_time_minutes/60);
+            double nMin = theo_min_time_minutes-60*nHours;
+            message += "Theoretical minimal duration on Gb connection: "+nHours+"h "+df2.format(nMin)+" min.<br>";
         } else {
-
-            if (theo_min_time_minutes>60) {
-                DecimalFormat df2 = new DecimalFormat("#0");
-                int nHours = (int) (theo_min_time_minutes/60);
-                double nMin = theo_min_time_minutes-60*nHours;
-                message += "Theoretical limit minimal duration on Gb connection: "+nHours+"h "+df2.format(nMin)+" min.<br>";
-                nHours = (int) (theo_min_time_minutes*4/60);
-                nMin = theo_min_time_minutes*4-60*nHours;
-                message += "Estimated duration on Gb connection: "+nHours+"h "+df2.format(nMin)+" min." // A la louche ;-)
-                        +"</html>";
-            } else {
-                message += "Theoretical limit minimal duration on Gb connection: "+df.format(theo_min_time_minutes)+" min.<br>";
-                message += "Estimated duration on Gb connection: "+df.format(theo_min_time_minutes*4)+" min." // A la louche ;-)
-                        +"</html>";
-            }
-
+            message += "Theoretical limit minimal duration on Gb connection: "+df.format(theo_min_time_minutes)+" min.<br>";
         }
+
+        double estimated_min_time_minutes = theo_min_time_minutes*4; // A la louche
+
+        if (estimated_min_time_minutes<1) {
+            message += "Estimated duration on Gb connection: below 1 min.<br>";
+        } else if (estimated_min_time_minutes>60) {
+            DecimalFormat df2 = new DecimalFormat("#0");
+            int nHours = (int) (estimated_min_time_minutes/60);
+            double nMin = estimated_min_time_minutes-60*nHours;
+            message += "Estimated duration on Gb connection: "+nHours+"h "+df2.format(nMin)+" min.";
+        } else {
+            message += "Estimated duration on Gb connection: "+df.format(estimated_min_time_minutes)+" min.<br>";
+        }
+
+        message+="</html>";
 
         return message;
     }
