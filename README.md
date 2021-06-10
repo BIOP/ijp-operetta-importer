@@ -1,3 +1,5 @@
+[![](https://travis-ci.com/BIOP/ijp-operetta-importer.svg?branch=master)](https://travis-ci.com/BIOP/ijp-operetta-importer)
+
 PerkinElmer Operetta Importer Command and API
 ======================================
 
