@@ -25,6 +25,7 @@ import ch.epfl.biop.operetta.OperettaManager;
 import ij.IJ;
 import net.imagej.ImgPlus;
 import net.imagej.axis.Axes;
+import net.imglib2.Point;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.img.CellLoader;
 import net.imglib2.cache.img.ReadOnlyCachedCellImgFactory;
@@ -41,7 +42,6 @@ import org.perf4j.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -109,7 +109,7 @@ public class TiledCellReader implements CellLoader <UnsignedShortType> {
             single_field = image_fetcher.getImageFile( sample, c, z, t);
             // Nice functionality, you can downscale and translate the image very easily
             single_field = Views.subsample( single_field, downscale, downscale );
-            single_field = Views.translate( single_field, pos.x, pos.y);
+            single_field = Views.translate( single_field, pos.getLongPosition(0), pos.getLongPosition(1));
 
             // This copies the pixels in the right position
             LoopBuilder.setImages( single_field, Views.interval( full_well_plane , single_field) ).forEachPixel( ( i, o ) -> o.set( i ) );
@@ -167,8 +167,8 @@ public class TiledCellReader implements CellLoader <UnsignedShortType> {
         Point topleft = opm.getTopLeftCoordinates( fields );
         Point bottomright = opm.getBottomRightCoordinates( fields );
 
-        int well_width = bottomright.x - topleft.x + sample_width;
-        int well_height = bottomright.y - topleft.y + sample_height;
+        long well_width = bottomright.getLongPosition(0) - topleft.getLongPosition(0) + sample_width;
+        long well_height = bottomright.getLongPosition(1) - topleft.getLongPosition(1) + sample_height;
 
         // Finally, correct for downscaling
         well_width /= downscale;

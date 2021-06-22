@@ -35,6 +35,7 @@ import ij.process.Blitter;
 import ij.process.ImageProcessor;
 import loci.formats.*;
 import loci.formats.meta.IMetadata;
+import net.imglib2.Point;
 import ome.units.UNITS;
 import ome.units.quantity.Length;
 import ome.units.quantity.Time;
@@ -45,7 +46,6 @@ import org.perf4j.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -56,8 +56,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -65,7 +63,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -687,8 +684,8 @@ public class OperettaManager {
         Point topleft = getTopLeftCoordinates( well.copyWellSampleList( ) );
         Point bottomright = getBottomRightCoordinates( well.copyWellSampleList( ) );
 
-        int well_width = bottomright.x - topleft.x + sample_width;
-        int well_height = bottomright.y - topleft.y + sample_height;
+        long well_width = bottomright.getLongPosition(0) - topleft.getLongPosition(0) + sample_width;
+        long well_height = bottomright.getLongPosition(1) - topleft.getLongPosition(1) + sample_height;
 
         // If there is a region, then the final width and height will be the same
         if ( bounds != null ) {
@@ -706,7 +703,7 @@ public class OperettaManager {
         final int n = range2.getTotalPlanes( );
 
         // TODO: Bit depth is hard coded here, but it could be made variable
-        final ImageStack wellStack = ImageStack.create( well_width, well_height, n, 16 );
+        final ImageStack wellStack = ImageStack.create( (int) well_width, (int) well_height, n, 16 );
 
         AtomicInteger ai = new AtomicInteger( 0 );
 
@@ -715,14 +712,14 @@ public class OperettaManager {
             Roi subregion = getFieldSubregion( field, bounds, topleft );
 
             final Point pos = getFieldAdjustedCoordinates( field, bounds, subregion, topleft, downscale );
-            log.info( String.format( "Sample Position: %d, %d", pos.x, pos.y ) );
+            log.info( String.format( "Sample Position: %d, %d", pos.getLongPosition(0), pos.getLongPosition(1) ) );
 
             final ImageStack stack = readSingleStack( field, downscale, range2, subregion );
 
             if ( stack != null ) {
                 for ( int s = 0; s < stack.size( ); s++ ) {
                     wellStack.getProcessor( s + 1 )
-                            .copyBits( stack.getProcessor( s + 1 ), pos.x, pos.y, Blitter.COPY );
+                            .copyBits( stack.getProcessor( s + 1 ), (int) pos.getLongPosition(0), (int) pos.getLongPosition(1), Blitter.COPY );
 
                     wellStack.setSliceLabel( stack.getSliceLabel( s + 1 ), s + 1 );
                 }
@@ -909,7 +906,7 @@ public class OperettaManager {
             for ( WellSample sample : samples ) {
                 String name = getFinalFieldImageName( sample );
                 Point pos = getUncalibratedCoordinates( sample );
-                writer.write( String.format( "%s.tif;      ;               (%d.0, %d.0%s)\n", name, pos.x / downscale, pos.y / downscale, z ) );
+                writer.write( String.format( "%s.tif;      ;               (%d.0, %d.0%s)\n", name, pos.getLongPosition(0) / downscale, pos.getLongPosition(1) / downscale, z ) );
             }
         }
     }
@@ -971,8 +968,8 @@ public class OperettaManager {
         List<WellSample> selected = fields.stream( ).filter( s -> {
 
             int sample_id = s.getIndex( ).getValue( );
-            int x = getUncalibratedPositionX( s ) - topleft.x;
-            int y = getUncalibratedPositionY( s ) - topleft.y;
+            long x = getUncalibratedPositionX( s ) - topleft.getLongPosition(0);
+            long y = getUncalibratedPositionY( s ) - topleft.getLongPosition(1);
             int w = metadata.getPixelsSizeX( sample_id ).getValue( );
             int h = metadata.getPixelsSizeY( sample_id ).getValue( );
 
@@ -1051,29 +1048,28 @@ public class OperettaManager {
      * @param topleft the topleft coordinate, as a Point()
      * @return the Roi, modified to fit the bounds
      */
-    private Roi getFieldSubregion( WellSample field, Roi bounds, Point topleft ) {
+    private Roi getFieldSubregion(WellSample field, Roi bounds, Point topleft) {
 
         // The field always contains the subregion so we avoid checking for overlap
-        int x, y, w, h;
+        long x, y, w, h;
         x = 0;
         y = 0;
-
         int sample_id = field.getIndex( ).getValue( );
 
         w = metadata.getPixelsSizeX( sample_id ).getValue( );
         h = metadata.getPixelsSizeY( sample_id ).getValue( );
 
         Point coordinates = getUncalibratedCoordinates( field );
-        coordinates.translate( -topleft.x, -topleft.y );
+        coordinates.move( new long[] {-topleft.getLongPosition(0), -topleft.getLongPosition(1) } );
         if ( bounds != null ) {
 
-            if ( bounds.getBounds( ).x > coordinates.x ) {
-                x = bounds.getBounds( ).x - coordinates.x;
+            if ( bounds.getBounds( ).x > coordinates.getLongPosition(0) ) {
+                x = bounds.getBounds( ).x - coordinates.getLongPosition(0);
                 w -= x;
             }
 
-            if ( bounds.getBounds( ).y > coordinates.y ) {
-                y = bounds.getBounds( ).y - coordinates.y;
+            if ( bounds.getBounds( ).y > coordinates.getLongPosition(1) ) {
+                y = bounds.getBounds( ).y - coordinates.getLongPosition(1);
                 h -= y;
             }
         }
@@ -1085,28 +1081,28 @@ public class OperettaManager {
      * @param field the field where we want the X position
      * @return the X position of the field
      */
-    private Integer getUncalibratedPositionX( WellSample field ) {
+    private Long getUncalibratedPositionX( WellSample field ) {
         Length px = field.getPositionX( );
 
         if ( px == null ) return null;
 
-        double px_m = px.value( UNITS.NANOMETER ).doubleValue( );
+        double px_m = px.value( UNITS.MICROMETER ).doubleValue( );
 
-        return Math.toIntExact( Math.round( px_m / px_size.value( UNITS.NANOMETER ).doubleValue( ) * this.correction_factor ) );
+        return Math.round( px_m / px_size.value( UNITS.MICROMETER ).doubleValue( ) * this.correction_factor );
     }
     /**
      * Returns the Y position of the field in pixels
      * @param field the field where we want the Y position
      * @return the Y position of the field
      */
-    private Integer getUncalibratedPositionY( WellSample field ) {
+    private Long getUncalibratedPositionY( WellSample field ) {
         Length px = field.getPositionY( );
 
         if ( px == null ) return null;
 
-        double px_m = px.value( UNITS.NANOMETER ).doubleValue( );
+        double px_m = px.value( UNITS.MICROMETER ).doubleValue( );
 
-        return Math.toIntExact( Math.round( px_m / px_size.value( UNITS.NANOMETER ).doubleValue( ) * this.correction_factor ) );
+        return Math.round( px_m / px_size.value( UNITS.MICROMETER ).doubleValue( ) * this.correction_factor );
     }
     /**
      * Returns the position of the field in pixels as a Point
@@ -1114,8 +1110,8 @@ public class OperettaManager {
      * @return a 2D Point with the xy pixel position of the fieldgit staguit
      */
     private Point getUncalibratedCoordinates( WellSample field ) {
-        Integer px = getUncalibratedPositionX( field );
-        Integer py = getUncalibratedPositionY( field );
+        Long px = getUncalibratedPositionX( field );
+        Long py = getUncalibratedPositionY( field );
         return new Point( px, py );
     }
 
@@ -1135,15 +1131,15 @@ public class OperettaManager {
         Point pos = getUncalibratedCoordinates( field );
 
         // After this, pos is the absolute position of the current sample in pixels and that should be it
-        pos.translate( -topleft.x, -topleft.y );
+        pos.move( new long[]{ -topleft.getLongPosition(0), -topleft.getLongPosition(1) } );
 
         // Because there are bounds, we might need to refine this position to account for the fact we only
         // took a subregion from the original image
         if ( bounds != null )
-            pos.translate( subregion.getBounds( ).x - bounds.getBounds( ).x, subregion.getBounds( ).y - bounds.getBounds( ).y );
+            pos.move( new long[]{ subregion.getBounds( ).x - bounds.getBounds( ).x, subregion.getBounds( ).y - bounds.getBounds( ).y } );
 
         // We need to offset the coordinates by the global minimum (topleft) coordinates
-        pos.setLocation( ( pos.x ) / downscale, ( pos.y ) / downscale );
+        pos.setPosition( new long[]{( pos.getLongPosition(0) ) / downscale, ( pos.getLongPosition(1) ) / downscale });
         return pos;
 
 
@@ -1160,8 +1156,8 @@ public class OperettaManager {
         WellSample minx = fields.stream( ).min( Comparator.comparing( WellSample::getPositionX ) ).get( );
         WellSample miny = fields.stream( ).min( Comparator.comparing( WellSample::getPositionY ) ).get( );
 
-        int px = getUncalibratedPositionX( minx );
-        int py = getUncalibratedPositionY( miny );
+        Long px = getUncalibratedPositionX( minx );
+        Long py = getUncalibratedPositionY( miny );
 
         return new Point( px, py );
     }
@@ -1178,8 +1174,8 @@ public class OperettaManager {
         WellSample maxy = fields.stream( ).max( Comparator.comparing( WellSample::getPositionY ) ).get( );
         // Might need something like this ( ( OMEXMLMetadata) metadata.getRoot() ).getPlanePositionX(  )
 
-        Integer px = getUncalibratedPositionX( maxx );
-        Integer py = getUncalibratedPositionY( maxy );
+        Long px = getUncalibratedPositionX( maxx );
+        Long py = getUncalibratedPositionY( maxy );
 
         if (px != null && py!= null) {
             return new Point( px, py );
