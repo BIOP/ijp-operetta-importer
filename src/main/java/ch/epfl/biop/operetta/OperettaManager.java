@@ -821,7 +821,8 @@ public class OperettaManager {
                     e.printStackTrace( );
                 }
             } else {
-                ImagePlus well_image = getWellImage( well, well_fields, downscale, this.range, region );
+                // Need to give all the fields, otherwise we will get the origin wrong
+                ImagePlus well_image = getWellImage( well, well.copyWellSampleList( ), downscale, this.range, region );
                 String name = getFinalWellImageName( well );
                 if ( well_image != null ) {
                     IJ.saveAsTiff( well_image, new File( save_folder, name + ".tif" ).getAbsolutePath( ) );
@@ -915,7 +916,7 @@ public class OperettaManager {
      * Check Rois for overlap, as rectangles only
      * @param one the first roi
      * @param other the second roi
-     * @return true if thereis an overlap
+     * @return true if there is an overlap
      */
     private boolean isOverlapping( Roi one, Roi other ) {
         return one.getBounds( ).intersects( other.getBounds( ) );
