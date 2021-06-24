@@ -46,6 +46,7 @@ import org.perf4j.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -676,6 +677,7 @@ public class OperettaManager {
 
         // Out of these coordinates, keep only those that are intersecting with the bounds
         final List<WellSample> adjusted_fields= getIntersectingFields( fields, bounds );
+        // Problem with ROI bounds is that they are typically given relative to the fused image
 
         if ( adjusted_fields.size( ) == 0 ) return null;
 
@@ -685,8 +687,8 @@ public class OperettaManager {
         int sample_height = metadata.getPixelsSizeY( a_field_id ).getValue( );
 
         // Get extents for the final image
-        Point topleft = getTopLeftCoordinates( well.copyWellSampleList( ) );
-        Point bottomright = getBottomRightCoordinates( well.copyWellSampleList( ) );
+        Point topleft = getTopLeftCoordinates( adjusted_fields );
+        Point bottomright = getBottomRightCoordinates( adjusted_fields );
 
         long well_width = bottomright.getLongPosition(0) - topleft.getLongPosition(0) + sample_width;
         long well_height = bottomright.getLongPosition(1) - topleft.getLongPosition(1) + sample_height;
@@ -802,10 +804,29 @@ public class OperettaManager {
                 well_fields = well.copyWellSampleList( );
             }
 
-            if (region != null)  well_fields = getIntersectingFields( well_fields, region );
+            // Need to potentially adjust the ROI. In the case of fused fields with a subset,
+            // the roi coordinates need to be corrected because the top left point, which we use as the origin
+            // might be incorrect
+            if (region != null)  {
+                // This is the point from which the ROI was created in the GUI, using all fields
+                Point topleftAll = getTopLeftCoordinates( well_fields );
+
+                well_fields = getIntersectingFields( well_fields, region );
+
+                if( !is_fields_individual ) {
+                    // This is now the new top left point, based on the remaining fields, we need to shift the ROI to this new origin
+                    Point topleftNew = getTopLeftCoordinates(well_fields);
+                    Rectangle bounds = region.getBounds();
+                    IJ.log("Region no adjustment: "+region);
+
+                    region.setLocation(bounds.getX()-(topleftNew.getLongPosition(0)-topleftAll.getLongPosition(0)),
+                                       bounds.getY()-(topleftNew.getLongPosition(1)-topleftAll.getLongPosition(1)));
+                    IJ.log("Region after adjustment: "+region);
+
+                }
+            }
 
             if ( is_fields_individual ) {
-                //Point topleft = getTopLeftCoordinates( well_fields );
                 AtomicInteger iField = new AtomicInteger();
                 for ( WellSample field : well_fields ) {
                     iField.incrementAndGet();
@@ -969,7 +990,7 @@ public class OperettaManager {
      * Finds fields related to the bounds that were given, so as to limit the number of files to export
      * @param fields the fileds to check intersections in
      * @param bounds the roi for which we are looking for the intersecting fields
-     * @return a List of fields (WellSample s) that intersect with the give Roi
+     * @return a List of fields (WellSample s) that intersect with the given Roi
      */
     public List<WellSample> getIntersectingFields( List<WellSample> fields, Roi bounds ) {
         // Coordinates are in pixels
@@ -1002,7 +1023,7 @@ public class OperettaManager {
         } ).collect( Collectors.toList( ) );
         //imp.show();
         // Sort through them
-        log.info( "Selected Samples: " + selected.toString( ) );
+        IJ.log( "Selected Samples: " + selected.toString( ) );
         return selected;
     }
 
@@ -1179,8 +1200,11 @@ public class OperettaManager {
 
         Long px = getUncalibratedPositionX( minx );
         Long py = getUncalibratedPositionY( miny );
+        Point p = new Point( px, py );
+        IJ.log("Top Left Point: "+p);
 
-        return new Point( px, py );
+        return p;
+
     }
 
     /**
