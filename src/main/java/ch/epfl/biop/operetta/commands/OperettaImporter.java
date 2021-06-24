@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-3.0.html>.
@@ -40,7 +40,7 @@ import java.io.IOException;
  * Because the initial parsing can take a while, it is better for the user to have an estimation
  * of the time it will take to open the Operetta dataset, before launching the interactive command
  */
-@Plugin( type = Command.class, menuPath = "Plugins>BIOP > Operetta Importer..." )
+@Plugin(type = Command.class, menuPath = "Plugins>BIOP > Operetta Importer...")
 public class OperettaImporter implements Command {
 
     // Useful to display the label of the folder parameter
@@ -58,12 +58,12 @@ public class OperettaImporter implements Command {
         // A few checks and warning for big files
         File f = new File(folder, "Index.idx.xml");
         if (!f.exists()) {
-            IJ.log("Error, file "+f.getAbsolutePath()+" not found!");
+            IJ.log("Error, file " + f.getAbsolutePath() + " not found!");
             return;
         }
 
-        int sizeInMb = (int) ((double) FileUtils.sizeOf(f)/(double)(1024*1024));
-        IJ.log("- Opening Operetta dataset "+f.getAbsolutePath()+" (" + sizeInMb + " Mb)");
+        int sizeInMb = (int) ((double) FileUtils.sizeOf(f) / (double) (1024 * 1024));
+        IJ.log("- Opening Operetta dataset " + f.getAbsolutePath() + " (" + sizeInMb + " Mb)");
 
         File fmemo = new File(folder, ".Index.idx.xml.bfmemo");
         int estimatedOpeningTimeInMin;
@@ -75,7 +75,7 @@ public class OperettaImporter implements Command {
             IJ.log("- Memo file detected.");
         }
 
-        if (estimatedOpeningTimeInMin==0) {
+        if (estimatedOpeningTimeInMin == 0) {
             IJ.log("- Estimated opening time below 1 minute.");
         } else {
             IJ.log("- Estimated opening time = " + estimatedOpeningTimeInMin + " min.");
@@ -102,20 +102,20 @@ public class OperettaImporter implements Command {
                 IJ.log("Operetta dataset opening interrupted!");
                 return;
             }
-            if ((countSeconds % 20)==0) {
+            if ((countSeconds % 20) == 0) {
                 IJ.log("- t = " + countSeconds + " s");
             }
         }
 
-        if (reader[0]==null) {
+        if (reader[0] == null) {
             IJ.log("Error during reader creation, please retry or post your issue in forum.image.sc.");
         } else {
-            IJ.log("Done! Opening the dataset took "+countSeconds+" s.");
+            IJ.log("Done! Opening the dataset took " + countSeconds + " s.");
 
-            OperettaManager.Builder opmBuilder =  new OperettaManager.Builder()
+            OperettaManager.Builder opmBuilder = new OperettaManager.Builder()
                     .reader(reader[0]);
 
-            cs.run(OperettaImporterInteractive.class,true,      "opmBuilder", opmBuilder);
+            cs.run(OperettaImporterInteractive.class, true, "opmBuilder", opmBuilder);
         }
 
     }
