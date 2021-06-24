@@ -46,7 +46,7 @@ target_dir.mkdirs()
 //Process all wells
 
 allWells.each{ well ->
-	def fields = opm.getAvailableSamples( well )
+	def fields = opm.getAvailableFields( well )
 
 
 	fields.each { field ->

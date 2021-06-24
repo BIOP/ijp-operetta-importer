@@ -27,7 +27,7 @@ allWells.each { well ->
 
 	// Process Each ROI
 	ypos.eachWithIndex { y, i ->
-		def fields = opm.getAvailableSamples(well)
+		def fields = opm.getAvailableFields(well)
 
 		def roi = new Roi( xpos[i], ypos[i], width_full, height_full )
 

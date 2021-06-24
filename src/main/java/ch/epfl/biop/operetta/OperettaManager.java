@@ -378,7 +378,7 @@ public class OperettaManager {
      * @param well the selected well
      * @return a list of Fields (WellSamples)
      */
-    public List<WellSample> getAvailableSamples( Well well ) {
+    public List<WellSample> getAvailableFields(Well well ) {
         return well.copyWellSampleList( );
     }
 
@@ -390,7 +390,7 @@ public class OperettaManager {
      */
     public WellSample getField( Well well, int field_id ) {
         System.out.println("field_id="+field_id);
-        WellSample field = getAvailableSamples( well ).stream( ).filter( s -> s.getIndex( ).getValue( ) == field_id ).findFirst( ).get( );
+        WellSample field = getAvailableFields( well ).stream( ).filter(s -> s.getIndex( ).getValue( ) == field_id ).findFirst( ).get( );
         log.info( "Field with ID {} is {}", field_id, field.getID( ) );
         return field;
     }
