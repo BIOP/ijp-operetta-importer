@@ -112,8 +112,11 @@ public class OperettaImporterInteractive extends InteractiveCommand {
     @Parameter( label = "Max Value" )
     Integer norm_max = (int) Math.pow( 2, 16 ) - 1;
 
+    @Parameter( label = "Update Data Estimation", callback = "updateMessage", persist = false )
+    Button updateMessage;
+
     @Parameter(visibility = ItemVisibility.MESSAGE, persist = false, style = "message")
-    String taskSummary = getMessage(0,0,"");
+    String taskSummary = getMessage(0,0,"","Original Size (W:,F:,X:,Y:,Z:,C:,T:)", "Exported Size (W:,F:,X:,Y:,Z:,C:,T:) ");
 
     @Parameter( label = "Process", callback = "doProcess", persist = false )
     Button process;
@@ -128,7 +131,7 @@ public class OperettaImporterInteractive extends InteractiveCommand {
 
     private ImagePlus roiImage;
 
-    private String getMessage(long bytes_in, long bytes_out, String name) {
+    private String getMessage(long bytes_in, long bytes_out, String name, String oriSize, String exportSize) {
         DecimalFormat df = new DecimalFormat("#0.0");
 
         double gb_in = ((double)bytes_in)/(1024*1024*1024);
@@ -138,6 +141,8 @@ public class OperettaImporterInteractive extends InteractiveCommand {
 
 
         String message =  "<html>"// Process task: <br/>"
+                +"<p>"+oriSize+"<br>"
+                +"<p>"+exportSize+"<br>"
                 +"<p>Operetta Dataset "+name+"<ul>";
 
         if (gb_in<0.1) {
@@ -200,6 +205,8 @@ public class OperettaImporterInteractive extends InteractiveCommand {
             List<String> selected_wells = opm.getAvailableWellsString( );
             List<String> selected_fields = opm.getAvailableFieldsString( );
 
+            int oriWellsNumber = selected_wells.size();
+            int oriFieldsNumber = selected_fields.size();
 
             if (!selected_wells_str.equals( "" )) {
                 selected_wells = stringToList( selected_wells_str );
@@ -223,7 +230,12 @@ public class OperettaImporterInteractive extends InteractiveCommand {
 
             long[] bytes = opm.getIOBytes(wells, field_ids, this.downsample, roi, !is_fuse_fields);
 
-            taskSummary = getMessage(bytes[0], bytes[1], opm.getPlateName());
+            long[] dimsIO = opm.getIODimensions(downsample);
+
+            String oriSize = "Original Size <ul><li>W:"+oriWellsNumber+", F:"+oriFieldsNumber+", X:"+dimsIO[0]+", Y:"+dimsIO[1]+", Z:"+dimsIO[2]+", C:"+dimsIO[3]+", T:"+dimsIO[4]+"</li></ul>";
+            String exportSize = "Exported Size <ul><li>W:"+selected_wells.size()+", F:"+selected_fields.size()+", X:"+dimsIO[5]+", Y:"+dimsIO[6]+", Z:"+dimsIO[7]+", C:"+dimsIO[8]+", T:"+dimsIO[9]+"</li></ul>";
+
+            taskSummary = getMessage(bytes[0], bytes[1], opm.getPlateName(), oriSize, exportSize);
 
         } catch (Exception e) {
             taskSummary = "Error "+e.getMessage();

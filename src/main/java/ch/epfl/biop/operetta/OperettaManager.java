@@ -405,7 +405,7 @@ public class OperettaManager {
 
         int row = well.getRow( ).getValue( )+1;
         int col = well.getColumn( ).getValue( )+1;
-        String project = metadata.getPlateName( 0 );
+        String project = getPlateName();
 
         String name = String.format( "%s - R%d-C%d", project, row, col );
 
@@ -416,7 +416,11 @@ public class OperettaManager {
     }
 
     public String getPlateName() {
-        return metadata.getPlateName( 0 );
+        return safeName(metadata.getPlateName(0));
+    }
+
+    public static String safeName(String nameUnsafe) {
+        return nameUnsafe.replaceAll("[^\\w\\s\\-_]", "_");
     }
 
     /**
@@ -431,7 +435,7 @@ public class OperettaManager {
         String local_field_id = field_id.substring( Integer.valueOf( field_id.lastIndexOf( ":" ) ) + 1 );
 
 
-        String project = field.getWell( ).getPlate( ).getName( );
+        String project = safeName(field.getWell( ).getPlate( ).getName( ));
 
         String name = String.format( "%s - R%d-C%d-F%s", project, row, col, local_field_id );
 
@@ -870,6 +874,22 @@ public class OperettaManager {
         long sTOut = getRange().getRangeT().size();
 
         return new long[]{sX*sY*nTotalPlanes*nFields*nWells*(long)2, sXOut*sYOut*sZOut*sCOut*sTOut*nFieldsOut*nWells*(long)2}; // Assuming 16 bits images
+    }
+
+    public long[] getIODimensions(int downscale) {
+        long sX = main_reader.getSizeX( );
+        long sY = main_reader.getSizeY( );
+        long sZ = main_reader.getSizeZ( );
+        long sC = main_reader.getSizeC( );
+        long sT = main_reader.getSizeT( );
+
+        long sXOut = main_reader.getSizeX( )/downscale;
+        long sYOut = main_reader.getSizeY( )/downscale;
+        long sZOut = is_projection?1:getRange().getRangeZ().size();
+        long sCOut = getRange().getRangeC().size();
+        long sTOut = getRange().getRangeT().size();
+
+        return new long[]{sX, sY, sZ, sC, sT, sXOut, sYOut, sZOut, sCOut, sTOut};
     }
 
     @Override
