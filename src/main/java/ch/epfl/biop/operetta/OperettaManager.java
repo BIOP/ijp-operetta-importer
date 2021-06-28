@@ -561,7 +561,7 @@ public class OperettaManager {
     }
 
     /**
-     * Returns a stitched stack for the given well and associates fields
+     * Returns a stitched stack for the given well and associated fields
      *
      * @param well      the well to export
      * @param fields    the fields to read
@@ -587,8 +587,8 @@ public class OperettaManager {
         int sample_height = metadata.getPixelsSizeY(a_field_id).getValue();
 
         // Get extents for the final image
-        Point topleft = getTopLeftCoordinates(adjusted_fields);
-        Point bottomright = getBottomRightCoordinates(adjusted_fields);
+        Point topleft = getTopLeftCoordinates(fields);
+        Point bottomright = getBottomRightCoordinates(fields);
 
         long well_width = bottomright.getLongPosition(0) - topleft.getLongPosition(0) + sample_width;
         long well_height = bottomright.getLongPosition(1) - topleft.getLongPosition(1) + sample_height;
@@ -686,29 +686,11 @@ public class OperettaManager {
                 well_fields = well.copyWellSampleList();
             }
 
-            // Need to potentially adjust the ROI. In the case of fused fields with a subset,
-            // the roi coordinates need to be corrected because the top left point, which we use as the origin
-            // might be incorrect
-            if (region != null) {
-                // This is the point from which the ROI was created in the GUI, using all fields
-                Point topleftAll = getTopLeftCoordinates(well_fields);
-
-                well_fields = getIntersectingFields(well_fields, region);
-
-                if (!is_fields_individual) {
-                    // This is now the new top left point, based on the remaining fields, we need to shift the ROI to this new origin
-                    Point topleftNew = getTopLeftCoordinates(well_fields);
-                    Rectangle bounds = region.getBounds();
-                    IJ.log("Region no adjustment: " + region);
-
-                    region.setLocation(bounds.getX() - (topleftNew.getLongPosition(0) - topleftAll.getLongPosition(0)),
-                            bounds.getY() - (topleftNew.getLongPosition(1) - topleftAll.getLongPosition(1)));
-                    IJ.log("Region after adjustment: " + region);
-
-                }
-            }
-
             if (is_fields_individual) {
+                if (region != null) {
+                    well_fields = getIntersectingFields(well_fields, region);
+                }
+
                 AtomicInteger iField = new AtomicInteger();
                 for (WellSample field : well_fields) {
                     iField.incrementAndGet();
@@ -859,14 +841,9 @@ public class OperettaManager {
         // Coordinates are in pixels
         // bounds are in pixels
 
-        ImagePlus imp = IJ.createImage("", 500, 500, 1, 8);
-        imp.setOverlay(new Overlay());
         // Coordinates are set to 0 for each well
         if (bounds == null) return fields;
         log.info("Looking for samples intersecting with {}, ", bounds);
-
-        // We are selecting bounds
-        imp.getOverlay().add(resampleRoi(bounds, 30));
 
         Point topleft = getTopLeftCoordinates(fields);
 
@@ -879,7 +856,6 @@ public class OperettaManager {
             int h = metadata.getPixelsSizeY(sample_id).getValue();
 
             Roi other = new Roi(x, y, w, h);
-            imp.getOverlay().add(resampleRoi(other, 30));
 
             return isOverlapping(bounds, other);
 
@@ -1074,7 +1050,7 @@ public class OperettaManager {
         Long px = getUncalibratedPositionX(minx);
         Long py = getUncalibratedPositionY(miny);
         Point p = new Point(px, py);
-        IJ.log("Top Left Point: " + p);
+        //IJ.log("Top Left Point: " + p);
 
         return p;
 
