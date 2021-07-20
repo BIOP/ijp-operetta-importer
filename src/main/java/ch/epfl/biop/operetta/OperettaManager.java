@@ -907,7 +907,6 @@ public class OperettaManager {
         cal.setYUnit(meta.getYUnit());
         cal.setZUnit(meta.getZUnit());
         cal.setTimeUnit(meta.getTimeUnit());
-
         // Do the projection if needed
         if (this.is_projection) {
             ZProjector zp = new ZProjector();
@@ -915,13 +914,14 @@ public class OperettaManager {
             zp.setMethod(this.projection_type);
             zp.setStopSlice(result.getNSlices());
             if (result.getNSlices() > 1 || result.getNFrames() > 1) {
-                zp.doHyperStackProjection(false);
-                result = zp.getProjection();
+                zp.doHyperStackProjection(true);
             }
+            ImagePlus result2 = zp.getProjection();
+            result = result2;
         }
         result.setCalibration(cal);
-        return result;
 
+        return result;
     }
 
     /**
