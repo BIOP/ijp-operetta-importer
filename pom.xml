@@ -11,7 +11,7 @@
 
 	<groupId>ch.epfl.biop</groupId>
 	<artifactId>Operetta_Importer</artifactId>
-	<version>0.1.14-SNAPSHOT</version>
+	<version>0.1.15-SNAPSHOT</version>
 
 	<name>PerkinElmer Operetta Importer</name>
 	<description>Hold your horses</description>
@@ -92,7 +92,8 @@
 		<connection>scm:git:git://github.com/BIOP/ijp-operetta-importer</connection>
 		<developerConnection>scm:git:git@github.com:BIOP/ijp-operetta-importer</developerConnection>
 		<url>https://github.com/BIOP/ijp-operetta-importer.git</url>
-	</scm>
+	  <tag>HEAD</tag>
+  </scm>
 
 	<ciManagement>
 		<system>Travis CI</system>
