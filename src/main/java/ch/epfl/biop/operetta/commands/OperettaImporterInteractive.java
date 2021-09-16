@@ -371,7 +371,7 @@ public class OperettaImporterInteractive extends InteractiveCommand {
     }
 
     int getRow(String well_str) {
-        Pattern p = Pattern.compile("R(\\d)-C(\\d)");
+        Pattern p = Pattern.compile("R(\\d+)-C(\\d+)");
         Matcher m = p.matcher(well_str);
         if (m.find()) {
             return Integer.parseInt(m.group(1));
@@ -380,7 +380,7 @@ public class OperettaImporterInteractive extends InteractiveCommand {
     }
 
     int getColumn(String well_str) {
-        Pattern p = Pattern.compile("R(\\d)-C(\\d)");
+        Pattern p = Pattern.compile("R(\\d+)-C(\\d+)");
         Matcher m = p.matcher(well_str);
         if (m.find()) {
             return Integer.parseInt(m.group(2));
