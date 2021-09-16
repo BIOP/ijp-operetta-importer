@@ -92,7 +92,6 @@
 		<connection>scm:git:git://github.com/BIOP/ijp-operetta-importer</connection>
 		<developerConnection>scm:git:git@github.com:BIOP/ijp-operetta-importer</developerConnection>
 		<url>https://github.com/BIOP/ijp-operetta-importer.git</url>
-		<tag>Operetta_Importer-0.1.7</tag>
 	</scm>
 
 	<ciManagement>
