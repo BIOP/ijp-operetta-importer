@@ -1,4 +1,4 @@
-[![](https://travis-ci.com/BIOP/ijp-operetta-importer.svg?branch=master)](https://travis-ci.com/BIOP/ijp-operetta-importer)
+[![](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml/badge.svg)](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml)
 
 PerkinElmer Operetta Importer Command and API
 ======================================
