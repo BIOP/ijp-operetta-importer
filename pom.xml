@@ -92,7 +92,7 @@
 		<connection>scm:git:git://github.com/BIOP/ijp-operetta-importer</connection>
 		<developerConnection>scm:git:git@github.com:BIOP/ijp-operetta-importer</developerConnection>
 		<url>https://github.com/BIOP/ijp-operetta-importer.git</url>
-    </scm>
+   </scm>
 
 	<ciManagement>
 		<system>GitHub Actions</system>
