@@ -297,7 +297,7 @@ public class OperettaManager {
         int col = well.getColumn().getValue() + 1;
         String project = getPlateName();
 
-        String name = String.format("%s - R%d-C%d", project, row, col);
+        String name = String.format("%s - R%02d-C%02d", project, row, col);
 
         if (this.is_projection)
             name += "_Projected";
@@ -324,7 +324,7 @@ public class OperettaManager {
 
         String project = safeName(field.getWell().getPlate().getName());
 
-        String name = String.format("%s - R%d-C%d-F%s", project, row, col, local_field_id);
+        String name = String.format("%s - R%02d-C%02d-F%s", project, row, col, local_field_id);
 
         if (this.is_projection)
             name += "_Projected";
