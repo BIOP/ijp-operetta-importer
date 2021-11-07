@@ -1,7 +1,5 @@
 [![](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml/badge.svg)](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml)
 
-[![](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml/badge.svg)](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml)
-
 PerkinElmer Operetta Importer Command and API
 ======================================
 
