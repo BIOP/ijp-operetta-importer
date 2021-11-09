@@ -34,6 +34,7 @@ import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import ome.xml.model.Well;
 import ome.xml.model.WellSample;
+import org.scijava.Initializable;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
 import org.scijava.command.InteractiveCommand;
@@ -52,7 +53,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Plugin(type = Command.class)
-public class OperettaImporterInteractive extends InteractiveCommand {
+public class OperettaImporterInteractive extends InteractiveCommand implements Initializable {
     private ImagePlus roiImage;
     @Parameter(required = false)
     OperettaManager.Builder opmBuilder;
@@ -65,11 +66,11 @@ public class OperettaImporterInteractive extends InteractiveCommand {
     @Parameter(label = "Save Directory", style = FileWidget.DIRECTORY_STYLE)
     File save_directory = new File(System.getProperty("user.home") + File.separator);
 
-    @Parameter(label = "Selected Wells. Leave blank for all", callback = "updateMessage", required = false)
+    @Parameter(label = "Selected Wells. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_wells_str = "";
     @Parameter(label = "Choose Wells", callback = "wellChooser", required = false, persist = false)
     private Button chooseWells;
-    @Parameter(label = "Selected Fields. Leave blank for all", callback = "updateMessage", required = false)
+    @Parameter(label = "Selected Fields. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_fields_str = "";
     @Parameter(label = "Choose Fields", callback = "fieldChooser", required = false, persist = false)
     private Button chooseFields;
@@ -113,15 +114,6 @@ public class OperettaImporterInteractive extends InteractiveCommand {
 
     @Parameter(label = "Process", callback = "doProcess", persist = false)
     Button process;
-
-    public static void main(final String... args) throws Exception {
-        // create the ImageJ application context with all available services
-        final ImageJ ij = new ImageJ();
-        ij.ui().showUI();
-
-        // invoke the plugin
-        ij.command().run(OperettaImporter.class, true);
-    }
 
     private String getMessage(long bytes_in, long bytes_out, String name, String oriSize, String exportSize) {
         DecimalFormat df = new DecimalFormat("#0.0");
@@ -453,5 +445,18 @@ public class OperettaImporterInteractive extends InteractiveCommand {
                 bounds = new Roi(Integer.parseInt(s[0].trim()), Integer.parseInt(s[1].trim()), Integer.parseInt(s[2].trim()), Integer.parseInt(s[3].trim()));
         }
         return bounds;
+    }
+
+    public static void main(final String... args) throws Exception {
+        // create the ImageJ application context with all available services
+        final ImageJ ij = new ImageJ();
+        ij.ui().showUI();
+
+        // invoke the plugin
+        ij.command().run(OperettaImporter.class, true);
+    }
+
+    public void initialize(){
+        updateMessage();
     }
 }

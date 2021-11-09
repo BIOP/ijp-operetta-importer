@@ -617,22 +617,27 @@ public class OperettaManager {
             // sample subregion should give the ROI coordinates for the current sample that we want to read
             Roi subregion = getFieldSubregion(field, bounds, topleft);
 
-            final Point pos = getFieldAdjustedCoordinates(field, bounds, subregion, topleft, downscale);
-            log.info(String.format("Sample Position: %d, %d", pos.getLongPosition(0), pos.getLongPosition(1)));
+            final int field_counter = ai.getAndIncrement();
 
-            final ImageStack stack = readSingleStack(field, downscale, range2, subregion);
+            if (subregion!=null) {
+                final Point pos = getFieldAdjustedCoordinates(field, bounds, subregion, topleft, downscale);
+                log.info(String.format("Sample Position: %d, %d", pos.getLongPosition(0), pos.getLongPosition(1)));
 
-            if (stack != null) {
-                for (int s = 0; s < stack.size(); s++) {
-                    wellStack.getProcessor(s + 1)
-                            .copyBits(stack.getProcessor(s + 1), (int) pos.getLongPosition(0), (int) pos.getLongPosition(1), Blitter.COPY);
+                final ImageStack stack = readSingleStack(field, downscale, range2, subregion);
 
-                    wellStack.setSliceLabel(stack.getSliceLabel(s + 1), s + 1);
+                if (stack != null) {
+                    for (int s = 0; s < stack.size(); s++) {
+                        wellStack.getProcessor(s + 1)
+                                .copyBits(stack.getProcessor(s + 1), (int) pos.getLongPosition(0), (int) pos.getLongPosition(1), Blitter.COPY);
+
+                        wellStack.setSliceLabel(stack.getSliceLabel(s + 1), s + 1);
+                    }
+
+                    // Use an AtomicInteger so that the log looks nice
+                    log.info(String.format("Field %d of %d Copied to Well", field_counter + 1, adjusted_fields.size()));
                 }
-
-                // Use an AtomicInteger so that the log looks nice
-                final int field_counter = ai.getAndIncrement();
-                log.info(String.format("Field %d of %d Copied to Well", field_counter + 1, adjusted_fields.size()));
+            } else {
+                log.warn(String.format("Field %d of %d not found.", field_counter + 1, adjusted_fields.size()));
             }
         });
 
@@ -814,7 +819,11 @@ public class OperettaManager {
             for (WellSample sample : samples) {
                 String name = getFinalFieldImageName(sample);
                 Point pos = getUncalibratedCoordinates(sample);
-                writer.write(String.format("%s.tif;      ;               (%d.0, %d.0%s)\n", name, pos.getLongPosition(0) / downscale, pos.getLongPosition(1) / downscale, z));
+                if (pos!=null) {
+                    writer.write(String.format("%s.tif;      ;               (%d.0, %d.0%s)\n", name, pos.getLongPosition(0) / downscale, pos.getLongPosition(1) / downscale, z));
+                } else {
+                    writer.write(String.format("# %s.tif;      ;               (NaN, NaN%s)\n", name, z));
+                }
             }
         }
     }
@@ -908,7 +917,7 @@ public class OperettaManager {
         cal.setZUnit(meta.getZUnit());
         cal.setTimeUnit(meta.getTimeUnit());
         // Do the projection if needed
-        if (this.is_projection) {
+        if ((this.is_projection)&&(result.getNSlices()>1)) {
             ZProjector zp = new ZProjector();
             zp.setImage(result);
             zp.setMethod(this.projection_type);
@@ -940,10 +949,17 @@ public class OperettaManager {
         y = 0;
         int sample_id = field.getIndex().getValue();
 
-        w = metadata.getPixelsSizeX(sample_id).getValue();
-        h = metadata.getPixelsSizeY(sample_id).getValue();
+        if ((metadata.getPixelsSizeX(sample_id) != null)&&(metadata.getPixelsSizeY(sample_id) != null)) {
+            w = metadata.getPixelsSizeX(sample_id).getValue();
+            h = metadata.getPixelsSizeY(sample_id).getValue();
+        } else {
+            return null;
+        }
 
         Point coordinates = getUncalibratedCoordinates(field);
+
+        if (coordinates==null) return null;
+
         coordinates.move(new long[]{-topleft.getLongPosition(0), -topleft.getLongPosition(1)});
         if (bounds != null) {
 
@@ -1001,6 +1017,9 @@ public class OperettaManager {
     private Point getUncalibratedCoordinates(WellSample field) {
         Long px = getUncalibratedPositionX(field);
         Long py = getUncalibratedPositionY(field);
+        if ((px==null)||(py==null)) {
+            return null;
+        }
         return new Point(px, py);
     }
 
