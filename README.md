@@ -27,7 +27,7 @@ Click `Manage Update Sites`
 
 Activate the `Operetta Importer` update site.
 
-'''WARNING: This update site override the Grid / Collection stitching plugin.''' This is because a bug is not resolved for XY+T datasets
+***WARNING: This update site override the Grid / Collection stitching plugin.*** This is because a bug is not resolved for XY+T datasets
 
 
 
