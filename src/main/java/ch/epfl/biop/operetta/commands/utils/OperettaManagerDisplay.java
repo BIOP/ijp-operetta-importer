@@ -2,7 +2,7 @@
  * #%L
  * Hold your horses
  * %%
- * Copyright (C) 2019 - 2021 BIOP
+ * Copyright (C) 2019 - 2022 BIOP
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
