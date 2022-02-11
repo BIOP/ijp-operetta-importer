@@ -162,7 +162,7 @@ public class OperettaManager {
      */
     public static IFormatReader createReader(final String id) throws IOException, FormatException {
         log.debug("Getting new reader for " + id);
-        IFormatReader reader = new ImageReader();
+        BIOPOperettaReader reader = new BIOPOperettaReader();
         reader.setFlattenedResolutions(false); // For compatibility with bdv-playground
         Memoizer memo = new Memoizer(reader);
         IMetadata omeMetaIdxOmeXml = MetadataTools.createOMEXMLMetadata();
@@ -1061,7 +1061,21 @@ public class OperettaManager {
      * @return a point with the xy pixel coordinates
      */
     public Point getTopLeftCoordinates(java.util.List<WellSample> fields) {
+        System.out.println("N fields: "+fields.size());
+
         fields = fields.stream().filter(sample -> sample.getPositionX() != null).collect(Collectors.toList());
+
+        System.out.println("N fields: "+fields.size());
+
+        if (fields.size() == 0) {
+            System.err.println("Cannot find coordinates");
+            return null;
+        }
+
+        fields.forEach(f-> {
+            System.out.println(f.getPositionX());
+            System.out.println(f.getPositionY());
+        });
 
         WellSample minx = fields.stream().min(Comparator.comparing(WellSample::getPositionX)).get();
         WellSample miny = fields.stream().min(Comparator.comparing(WellSample::getPositionY)).get();

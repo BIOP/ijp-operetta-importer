@@ -22,8 +22,9 @@ package ch.epfl.biop.operetta;
  * #L%
  */
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.time.Instant;
+import java.util.*;
+import java.util.function.Consumer;
 
 import loci.common.DataTools;
 import loci.common.Location;
@@ -325,7 +326,10 @@ public class BIOPOperettaReader extends FormatReader {
 
         String xmlData = DataTools.readFile(id);
         OperettaHandler handler = new OperettaHandler();
-        XMLTools.parseXML(xmlData, handler);
+        //XMLTools.parseXML(xmlData, handler);
+        try (RandomAccessInputStream xml = new RandomAccessInputStream(id)) {
+            XMLTools.parseXML(xml, handler);
+        }
 
         // sort the list of images by well and field indices
 
@@ -377,8 +381,21 @@ public class BIOPOperettaReader extends FormatReader {
         core.clear();
 
         planes = new Plane[seriesCount][zs.length * cs.length * ts.length];
+        planeList.get(0);
+
 
         int nextSeries = 0;
+
+        Map<String, Plane> hashToPlane =new HashMap<>();
+
+        for (Plane p : planeList) {
+            String key = p.row+":"+p.col+":"+p.field+":"+p.c+":"+p.z+":"+p.t;
+            if (hashToPlane.containsKey(key)) {
+                LOGGER.error("Multiple planes found for key {}",key);
+            }
+            hashToPlane.put(key, p);
+        }
+
         for (int row=0; row<rows.length; row++) {
             for (int col=0; col<cols.length; col++) {
                 for (int field=0; field<fields.length; field++) {
@@ -386,14 +403,9 @@ public class BIOPOperettaReader extends FormatReader {
                     for (int t=0; t<ts.length; t++) {
                         for (int z=0; z<zs.length; z++) {
                             for (int c=0; c<cs.length; c++) {
-                                for (Plane p : planeList) {
-                                    if (p.row == rows[row] && p.col == cols[col] &&
-                                            p.field == fields[field] && p.t == ts[t] && p.z == zs[z] &&
-                                            p.c == cs[c])
-                                    {
-                                        planes[nextSeries][nextPlane] = p;
-                                        break;
-                                    }
+                                String key = rows[row]+":"+cols[col]+":"+fields[field]+":"+cs[c]+":"+zs[z]+":"+ts[t];
+                                if (hashToPlane.containsKey(key)) {
+                                    planes[nextSeries][nextPlane] = hashToPlane.get(key);
                                 }
                                 nextPlane++;
                             }
@@ -479,6 +491,7 @@ public class BIOPOperettaReader extends FormatReader {
                 break;
             }
         }
+
         if (firstValidSeries < 0) {
             throw new FormatException("No valid images found");
         }
@@ -490,7 +503,6 @@ public class BIOPOperettaReader extends FormatReader {
                 core.get(i).littleEndian = core.get(firstValidSeries).littleEndian;
             }
         }
-
         addGlobalMeta("Plate name", handler.getPlateName());
         addGlobalMeta("Plate description", handler.getPlateDescription());
         addGlobalMeta("Plate ID", handler.getPlateIdentifier());
@@ -553,6 +565,11 @@ public class BIOPOperettaReader extends FormatReader {
                             wellSampleID, 0, 0, imageIndex);
 
                     if (planes[imageIndex][0] != null && planes[imageIndex][0].absoluteTime != null) {
+                        System.out.println("imageIndex="+imageIndex);
+                        System.out.println("well="+well);
+                        System.out.println("field="+field);
+                        System.out.println(planes[imageIndex][0].positionX);
+                        System.out.println(planes[imageIndex][0].positionY);
                         store.setImageAcquisitionDate(planes[imageIndex][0].absoluteTime, imageIndex);
                         store.setWellSamplePositionX(planes[imageIndex][0].positionX, 0, well, field);
                         store.setWellSamplePositionY(planes[imageIndex][0].positionY, 0, well, field);
@@ -888,7 +905,7 @@ public class BIOPOperettaReader extends FormatReader {
          * Applies the orientationMatrix to positionX, positionY, and positionZ.
          */
         public void applyMatrix() {
-           /* commented by Olivier Burri and Nicolas Chiaruttini
+           // commented by Olivier Burri and Nicolas Chiaruttini
             if (positionX == null || positionY == null ||
 
                     positionZ == null || orientationMatrix == null)
@@ -911,8 +928,6 @@ public class BIOPOperettaReader extends FormatReader {
             positionX = new Length(newValues[0], positionX.unit());
             positionY = new Length(newValues[1], positionY.unit());
             positionZ = new Length(newValues[2], positionZ.unit());
-
-            */
         }
 
     }
