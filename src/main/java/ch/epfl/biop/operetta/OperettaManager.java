@@ -57,10 +57,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -383,7 +381,7 @@ public class OperettaManager {
      * @return the resulting ImagePlus ( C,Z,T Hyperstack ), calibrated
      */
     public ImagePlus getWellImage(Well well) {
-        return makeImagePlus(readSingleWell(well, null, 1, this.range, null), well, null, getFinalWellImageName(well));
+        return makeImagePlus(readSingleWell(well, null, 1, this.range, null), well.copyWellSampleList(), null, getFinalWellImageName(well));
     }
 
     /**
@@ -395,7 +393,7 @@ public class OperettaManager {
      * @return the resulting ImagePlus ( C,Z,T Hyperstack ), calibrated
      */
     public ImagePlus getWellImage(Well well, int downscale) {
-        return makeImagePlus(readSingleWell(well, null, downscale, this.range, null), well, null, getFinalWellImageName(well));
+        return makeImagePlus(readSingleWell(well, null, downscale, this.range, null), well.copyWellSampleList(), null, getFinalWellImageName(well));
     }
 
     /**
@@ -408,7 +406,7 @@ public class OperettaManager {
      * @return the resulting ImagePlus ( C,Z,T Hyperstack ), calibrated
      */
     public ImagePlus getWellImage(Well well, int downscale, Roi subregion) {
-        return makeImagePlus(readSingleWell(well, null, downscale, this.range, subregion), well, null, getFinalWellImageName(well));
+        return makeImagePlus(readSingleWell(well, null, downscale, this.range, subregion), well.copyWellSampleList(), null, getFinalWellImageName(well));
     }
 
     /**
@@ -422,7 +420,7 @@ public class OperettaManager {
      * @return the resulting ImagePlus ( C,Z,T Hyperstack ), calibrated
      */
     public ImagePlus getWellImage(Well well, int downscale, HyperRange range, Roi subregion) {
-        return makeImagePlus(readSingleWell(well, null, downscale, range, subregion), well, range, getFinalWellImageName(well));
+        return makeImagePlus(readSingleWell(well, null, downscale, range, subregion), well.copyWellSampleList(), range, getFinalWellImageName(well));
     }
 
     /**
@@ -438,7 +436,7 @@ public class OperettaManager {
      */
     public ImagePlus getWellImage(Well well, List<WellSample> fields, int downscale, HyperRange range, Roi subregion) {
 
-        return makeImagePlus(readSingleWell(well, fields, downscale, range, subregion), well, range, getFinalWellImageName(well));
+        return makeImagePlus(readSingleWell(well, fields, downscale, range, subregion), well.copyWellSampleList(), range, getFinalWellImageName(well));
     }
 
     /**
@@ -448,20 +446,20 @@ public class OperettaManager {
      * @return a calibrated ImagePlus
      */
     public ImagePlus getFieldImage(WellSample field) {
-        return makeImagePlus(readSingleStack(field, 1, this.range, null), field.getWell(), null, getFinalFieldImageName(field));
+        return makeImagePlus(readSingleStack(field, 1, this.range, null), Collections.singletonList(field), null, getFinalFieldImageName(field));
     }
 
     public ImagePlus getFieldImage(WellSample field, int downscale) {
-        return makeImagePlus(readSingleStack(field, downscale, this.range, null), field.getWell(), null, getFinalFieldImageName(field));
+        return makeImagePlus(readSingleStack(field, downscale, this.range, null), Collections.singletonList(field), null, getFinalFieldImageName(field));
     }
 
     public ImagePlus getFieldImage(WellSample field, int downscale, Roi subregion) {
-        return makeImagePlus(readSingleStack(field, downscale, this.range, subregion), field.getWell(), null, getFinalFieldImageName(field));
+        return makeImagePlus(readSingleStack(field, downscale, this.range, subregion), Collections.singletonList(field), null, getFinalFieldImageName(field));
     }
 
     public ImagePlus getFieldImage(WellSample field, int downscale, HyperRange range, Roi subregion) {
 
-        return makeImagePlus(readSingleStack(field, downscale, range, subregion), field.getWell(), range, getFinalFieldImageName(field));
+        return makeImagePlus(readSingleStack(field, downscale, range, subregion), Collections.singletonList(field), range, getFinalFieldImageName(field));
     }
 
     /**
@@ -882,12 +880,12 @@ public class OperettaManager {
      * Will also handle the Z Projection if any
      *
      * @param stack the Stack produced
-     * @param well  the well where the stack comes from
+     * @param fields  all the fields that make up this image
      * @param range the range, for metadata purposes, can be null
      * @param name  the final name for the ImagePlus
      * @return a calibrated ImagePlus
      */
-    private ImagePlus makeImagePlus(ImageStack stack, Well well, HyperRange range, String name) {
+    private ImagePlus makeImagePlus(ImageStack stack, List<WellSample> fields, HyperRange range, String name) {
         if (stack == null) return null;
 
         int[] czt = range == null ? this.range.getCZTDimensions() : range.getCZTDimensions();
@@ -919,7 +917,16 @@ public class OperettaManager {
             ImagePlus result2 = zp.getProjection();
             result = result2;
         }
+        // Do the calibration for the origin
+        Point point = getTopLeftCoordinatesUm(fields);
+
+        cal.xOrigin = point.getDoublePosition(0);
+        cal.yOrigin = point.getDoublePosition(1);
+
         result.setCalibration(cal);
+
+
+
 
         return result;
     }
@@ -1057,6 +1064,28 @@ public class OperettaManager {
     }
 
     /**
+     * Returns the top left coordinates as a point
+     *
+     * @param fields the fields we should get the coordinates for
+     * @return a point with the xy pixel coordinates
+     */
+    public Point getTopLeftCoordinatesUm(java.util.List<WellSample> fields) {
+        fields = fields.stream().filter(sample -> sample.getPositionX() != null).collect(Collectors.toList());
+
+        WellSample minx = fields.stream().min(Comparator.comparing(WellSample::getPositionX)).get();
+        WellSample miny = fields.stream().min(Comparator.comparing(WellSample::getPositionY)).get();
+
+        Long px = minx.getPositionX().value(UNITS.MICROMETER).longValue();
+        Long py = miny.getPositionY().value(UNITS.MICROMETER).longValue();
+        Point p = new Point(px, py);
+        //IJ.log("Top Left Point: " + p);
+
+        return p;
+
+    }
+
+
+    /**
      * Returns the bottom right coordinates as a point
      *
      * @param fields the fields we should get the coordinates for
@@ -1101,10 +1130,12 @@ public class OperettaManager {
             px_depth = apx_depth.value(UNITS.MICROMETER).doubleValue();
         }
 
-        Time apx_time = metadata.getPixelsTimeIncrement(0);
+        // Trick to get the times: It is the deltaT between timepoints of any image, so we need the deltaT if the second timepoint
+        // which is ( nChannels * nSlices ) planes later
+        Time apx_time = metadata.getPixelsTimeIncrement(0) == null ? metadata.getPlaneDeltaT(0, czt[0] * czt[1]) : null;
         if (apx_time != null) {
-            px_time = apx_time.value(UNITS.MILLISECOND).doubleValue();
-            time_unit = UNITS.MILLISECOND.getSymbol();
+            px_time = apx_time.value(UNITS.SECOND).doubleValue();
+            time_unit = UNITS.SECOND.getSymbol();
         }
 
         Calibration cal = new Calibration();
