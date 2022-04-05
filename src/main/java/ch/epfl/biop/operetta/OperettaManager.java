@@ -1165,10 +1165,13 @@ public class OperettaManager {
 
         // Trick to get the times: It is the deltaT between timepoints of any image, so we need the deltaT if the second timepoint
         // which is ( nChannels * nSlices ) planes later
-        Time apx_time = metadata.getPixelsTimeIncrement(0) == null ? metadata.getPlaneDeltaT(0, czt[0] * czt[1]) : null;
-        if (apx_time != null) {
-            px_time = apx_time.value(UNITS.SECOND).doubleValue();
-            time_unit = UNITS.SECOND.getSymbol();
+
+        if (range.getCZTDimensions()[2]>1) { // We need at least a second timepoint !!
+            Time apx_time = metadata.getPixelsTimeIncrement(0) == null ? metadata.getPlaneDeltaT(0, czt[0] * czt[1]) : null;
+            if (apx_time != null) {
+                px_time = apx_time.value(UNITS.SECOND).doubleValue();
+                time_unit = UNITS.SECOND.getSymbol();
+            }
         }
 
         Calibration cal = new Calibration();
