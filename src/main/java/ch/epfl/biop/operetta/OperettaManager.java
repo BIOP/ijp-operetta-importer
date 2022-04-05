@@ -226,9 +226,14 @@ public class OperettaManager {
      * @return a List of wells
      */
     public List<Well> getAvailableWells() {
-
         OMEXMLMetadataRoot r = (OMEXMLMetadataRoot) metadata.getRoot();
-        return r.getPlate(0).copyWellList();
+        // Filters out wells which contain no fields -> not imaged
+        List<Well> nonEmptyWells = r.getPlate(0)
+                .copyWellList()
+                .stream()
+                .filter(well -> well.copyWellSampleList().get(0).getPositionX()!=null) // a weird way to check that the well was indeed imaged, see https://forum.image.sc/t/operetta-reader-bug-positions-not-parsed-found/61818
+                .collect(Collectors.toList());
+        return nonEmptyWells;
     }
 
     /**
@@ -276,7 +281,6 @@ public class OperettaManager {
      * @return the field corresponding to the ID
      */
     public WellSample getField(Well well, int field_id) {
-        System.out.println("field_id=" + field_id);
         WellSample field = getAvailableFields(well).stream().filter(s -> s.getIndex().getValue() == field_id).findFirst().get();
         log.info("Field with ID {} is {}", field_id, field.getID());
         return field;
@@ -1068,21 +1072,12 @@ public class OperettaManager {
      * @return a point with the xy pixel coordinates
      */
     public Point getTopLeftCoordinates(java.util.List<WellSample> fields) {
-        System.out.println("N fields: "+fields.size());
-
         fields = fields.stream().filter(sample -> sample.getPositionX() != null).collect(Collectors.toList());
-
-        System.out.println("N fields: "+fields.size());
 
         if (fields.size() == 0) {
             System.err.println("Cannot find coordinates");
             return null;
         }
-
-        fields.forEach(f-> {
-            System.out.println(f.getPositionX());
-            System.out.println(f.getPositionY());
-        });
 
         WellSample minx = fields.stream().min(Comparator.comparing(WellSample::getPositionX)).get();
         WellSample miny = fields.stream().min(Comparator.comparing(WellSample::getPositionY)).get();
@@ -1125,18 +1120,22 @@ public class OperettaManager {
      * @return a point with the xy pixel coordinates
      */
     public Point getBottomRightCoordinates(List<WellSample> fields) {
-        fields = fields.stream().filter(sample -> sample.getPositionX() != null).collect(Collectors.toList());
+        fields = fields.stream().filter(sample -> sample.getPositionY() != null).collect(Collectors.toList());
 
-        WellSample maxx = fields.stream().max(Comparator.comparing(WellSample::getPositionX)).get();
-        WellSample maxy = fields.stream().max(Comparator.comparing(WellSample::getPositionY)).get();
-        // Might need something like this ( ( OMEXMLMetadata) metadata.getRoot() ).getPlanePositionX(  )
+        if (fields.size()!=0) {
+            WellSample maxx = fields.stream().max(Comparator.comparing(WellSample::getPositionX)).get();
+            WellSample maxy = fields.stream().max(Comparator.comparing(WellSample::getPositionY)).get();
 
-        Long px = getUncalibratedPositionX(maxx);
-        Long py = getUncalibratedPositionY(maxy);
+            Long px = getUncalibratedPositionX(maxx);
+            Long py = getUncalibratedPositionY(maxy);
 
-        if (px != null && py != null) {
-            return new Point(px, py);
+            if (px != null && py != null) {
+                return new Point(px, py);
+            } else {
+                return new Point(0, 0);
+            }
         } else {
+            System.err.println("All fields are uncalibrated!");
             return new Point(0, 0);
         }
     }
