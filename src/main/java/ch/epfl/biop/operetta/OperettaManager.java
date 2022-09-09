@@ -527,6 +527,7 @@ public class OperettaManager {
                         if (range2.includes(files.get(i))) {
                             //IJ.log("files.get( "+i+" )+"+files.get( i ));
                             ImagePlus imp = (new Opener()).openImage(files.get(i));// IJ.openImage( files.get( i ) );
+
                             if (imp == null) {
                                 log.error("Could not open {}", files.get(i));
                                 //IJ.log( "Could not open "+ files.get( i ) );
