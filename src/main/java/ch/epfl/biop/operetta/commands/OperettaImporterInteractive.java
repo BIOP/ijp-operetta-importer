@@ -298,6 +298,10 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         int col = getColumn(selected_well);
         Well well = opm.getWell(row, col);
 
+
+        IJ.log("Opening Well "+selected_well+" image at a downscale of 8");
+        IJ.log("Selected Range "+opm.getRange().toString());
+
         ImagePlus sample;
         if (!is_fuse_fields && !selected_fields_string.equals("")) {
             WellSample field = opm.getField(well, getFields().get(0));
@@ -309,6 +313,8 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
         }
         sample.show();
+        IJ.log("Downsampled well opening done.");
+
         this.roiImage = sample;
         updateMessage();
     }

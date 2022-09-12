@@ -160,7 +160,7 @@ public class OperettaManager {
      */
     public static IFormatReader createReader(final String id) throws IOException, FormatException {
         log.debug("Getting new reader for " + id);
-        BIOPOperettaReader reader = new BIOPOperettaReader();
+        IFormatReader reader = new ImageReader();
         reader.setFlattenedResolutions(false); // For compatibility with bdv-playground
         Memoizer memo = new Memoizer(reader);
         IMetadata omeMetaIdxOmeXml = MetadataTools.createOMEXMLMetadata();
