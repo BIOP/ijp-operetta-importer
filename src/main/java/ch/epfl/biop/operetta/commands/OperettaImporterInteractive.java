@@ -265,6 +265,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     }
 
     private void roiChooser() {
+
         opm = opmBuilder
                 .doProjection(is_projection)
                 .setProjectionMethod(z_projection_method)
@@ -298,9 +299,6 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         int col = getColumn(selected_well);
         Well well = opm.getWell(row, col);
 
-
-        IJ.log("Opening Well "+selected_well+" image at a downscale of 8");
-        IJ.log("Selected Range "+opm.getRange().toString());
 
         ImagePlus sample;
         if (!is_fuse_fields && !selected_fields_string.equals("")) {
