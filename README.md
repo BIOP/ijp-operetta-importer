@@ -25,7 +25,7 @@ Go to `Help > Update...`
 
 Click `Manage Update Sites`
 
-Activate the `Operetta Importer` update site.
+Activate the `PTBIOP` update site.
 
 ***WARNING: This update site override the Grid / Collection stitching plugin.*** [This is because a bug is not resolved for XY+T datasets](https://github.com/fiji/Stitching/issues/47)
 
