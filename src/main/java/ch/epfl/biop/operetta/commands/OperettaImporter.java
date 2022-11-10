@@ -91,15 +91,8 @@ public class OperettaImporter implements Command {
         int sizeInMb = (int) ((double) FileUtils.sizeOf(f) / (double) (1024 * 1024));
         IJ.log("- Opening Operetta dataset " + f.getAbsolutePath() + " (" + sizeInMb + " Mb)");
 
-        File fmemo = new File(folder, ".Index.idx.xml.bfmemo");
-        int estimatedOpeningTimeInMin;
-        if (!fmemo.exists()) {
-            estimatedOpeningTimeInMin = sizeInMb / 30; // 30 Mb per minute
-            IJ.log("- No memo file, the first opening will take longer.");
-        } else {
-            estimatedOpeningTimeInMin = sizeInMb / 600; // 60 Mb per minute
-            IJ.log("- Memo file detected.");
-        }
+
+        int estimatedOpeningTimeInMin = sizeInMb / 600; // 60 Mb per minute
 
         if (estimatedOpeningTimeInMin == 0) {
             IJ.log("- Estimated opening time below 1 minute.");
