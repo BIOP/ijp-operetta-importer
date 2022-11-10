@@ -53,12 +53,38 @@ public class OperettaImporter implements Command {
     @Parameter
     CommandService cs;
 
+    private enum XMLFILE {
+        V5("Index.idx.xml", "PerkinElmer Harmony V5"),
+        V6("Index.xml", "PerkinElmer Harmony V6");
+
+        private final String description;
+        private final String indexFileName;
+
+        XMLFILE(String indexFileName, String description) {
+            this.indexFileName = indexFileName;
+            this.description = description;
+        }
+        private String getIndexFileName() { return this.indexFileName; }
+        public String getDescription() { return this.description; }
+    }
+
     @Override
     public void run() {
+        File f = null;
+        for (XMLFILE version: XMLFILE.values()) {
+            File candidate = new File(folder, version.getIndexFileName());
+            if (candidate.exists()) {
+                f = candidate;
+                break;
+            }
+        }
         // A few checks and warning for big files
-        File f = new File(folder, "Index.idx.xml");
-        if (!f.exists()) {
-            IJ.log("Error, file " + f.getAbsolutePath() + " not found!");
+        if (f == null) {
+            IJ.log("Error, no matching Index files found in " + folder.getAbsolutePath());
+            IJ.log("Implemented valid Index files:");
+            for (XMLFILE version : XMLFILE.values()) {
+                IJ.log("\t" + version.getIndexFileName() + " (" + version.getDescription() + ")");
+            }
             return;
         }
 
@@ -82,9 +108,10 @@ public class OperettaImporter implements Command {
         }
 
         final IFormatReader[] reader = new IFormatReader[1];
+        File finalF = f;
         Thread t = new Thread(() -> {
             try {
-                reader[0] = OperettaManager.createReader(f.getAbsolutePath());
+                reader[0] = OperettaManager.createReader(finalF.getAbsolutePath());
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (FormatException e) {
