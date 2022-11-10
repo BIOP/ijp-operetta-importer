@@ -83,6 +83,11 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     @Parameter(label = "Get Roi From Open Well", callback = "roiSelector", required = false, persist = false)
     private Button selectRoi;
 
+    @Parameter(label = "Flip Planes Horizontally", callback = "updateMessage", required = false)
+    private Boolean flip_horizontal;
+    @Parameter(label = "Flip Planes Vertically", callback = "updateMessage", required = false)
+    private Boolean flip_vertical;
+
     @Parameter(label = "Select Range", callback = "updateMessage", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String range = "You can use commas or colons to separate ranges. eg. '1:10' or '1,3,5,8' ";
 
@@ -110,7 +115,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     Button updateMessage;
 
     @Parameter(visibility = ItemVisibility.MESSAGE, persist = false, style = "message")
-    String taskSummary = getMessage(0, 0, "", "Original Size (W:,F:,X:,Y:,Z:,C:,T:)", "Exported Size (W:,F:,X:,Y:,Z:,C:,T:) ");
+    String taskSummary = "Click on 'Update Data Estimation'";
 
     @Parameter(label = "Process", callback = "doProcess", persist = false)
     Button process;
@@ -125,9 +130,9 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
 
         String message = "<html>"// Process task: <br/>"
-                + "<p>" + oriSize + "<br>"
-                + "<p>" + exportSize + "<br>"
-                + "<p>Operetta Dataset " + name + "<ul>";
+                + oriSize + "<br/>"
+                + exportSize + "<br/>"
+                + "Operetta Dataset " + name + "<ul>";
 
         if (gb_in < 0.1) {
             message += "<li>Read: less than 100 Mb</li>";
@@ -136,37 +141,36 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         }
 
         if (gb_out < 0.1) {
-            message += "<li>Write: less than 100 Mb</li>";
+            message += "<li>Write: less than 100 Mb</li></ul>";
         } else {
             message += "<li>Write: " + df.format(gb_out) + " Gb</li></ul>";
         }
 
         if (theo_min_time_minutes < 1) {
-            message += "Theoretical minimal duration on Gb connection: below 1 min.<br>";
+            message += "Theoretical minimal duration on Gb connection: below 1 min.<br/>";
         } else if (theo_min_time_minutes > 60) {
             DecimalFormat df2 = new DecimalFormat("#0");
             int nHours = (int) (theo_min_time_minutes / 60);
             double nMin = theo_min_time_minutes - 60 * nHours;
-            message += "Theoretical minimal duration on Gb connection: " + nHours + "h " + df2.format(nMin) + " min.<br>";
+            message += "Theoretical minimal duration on Gb connection: <strong>" + nHours + "h " + df2.format(nMin) + " min.</strong><br/>";
         } else {
-            message += "Theoretical limit minimal duration on Gb connection: " + df.format(theo_min_time_minutes) + " min.<br>";
+            message += "Theoretical limit minimal duration on Gb connection: <strong>" + df.format(theo_min_time_minutes) + " min.</strong><br/>";
         }
 
         double estimated_min_time_minutes = theo_min_time_minutes * 4; // A la louche
 
         if (estimated_min_time_minutes < 1) {
-            message += "Estimated duration on Gb connection: below 1 min.<br>";
+            message += "Estimated duration on Gb connection: <strong>below 1 min.</strong><br/>";
         } else if (estimated_min_time_minutes > 60) {
             DecimalFormat df2 = new DecimalFormat("#0");
             int nHours = (int) (estimated_min_time_minutes / 60);
             double nMin = estimated_min_time_minutes - 60 * nHours;
-            message += "Estimated duration on Gb connection: " + nHours + "h " + df2.format(nMin) + " min.";
+            message += "Estimated duration on Gb connection: <strong>" + nHours + "h " + df2.format(nMin) + " min.</strong>";
         } else {
-            message += "Estimated duration on Gb connection: " + df.format(estimated_min_time_minutes) + " min.<br>";
+            message += "Estimated duration on Gb connection: <strong>" + df.format(estimated_min_time_minutes) + " min.</strong><br/>";
         }
 
         message += "</html>";
-
         return message;
     }
 
@@ -180,6 +184,8 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
             opm = opmBuilder
                     .setRange(range)
+                    .flipHorizontal(this.flip_horizontal)
+                    .flipVertical(this.flip_vertical)
                     .setProjectionMethod(this.z_projection_method)
                     .doProjection(this.is_projection)
                     .setSaveFolder(this.save_directory)
@@ -195,7 +201,6 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
             if (!selected_wells_str.equals("")) {
                 selected_wells = stringToList(selected_wells_str);
             }
-
 
             if (!selected_fields_str.equals("")) {
                 selected_fields = stringToList(selected_fields_str);
@@ -216,8 +221,8 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
             long[] dimsIO = opm.getIODimensions(downsample);
 
-            String oriSize = "Original Size <ul><li>W:" + oriWellsNumber + ", F:" + oriFieldsNumber + ", X:" + dimsIO[0] + ", Y:" + dimsIO[1] + ", Z:" + dimsIO[2] + ", C:" + dimsIO[3] + ", T:" + dimsIO[4] + "</li></ul>";
-            String exportSize = "Exported Size <ul><li>W:" + selected_wells.size() + ", F:" + selected_fields.size() + ", X:" + dimsIO[5] + ", Y:" + dimsIO[6] + ", Z:" + dimsIO[7] + ", C:" + dimsIO[8] + ", T:" + dimsIO[9] + "</li></ul>";
+            String oriSize = "<strong>Original Size</strong>: W: " + oriWellsNumber + ", F:" + oriFieldsNumber + ", X:" + dimsIO[0] + ", Y:" + dimsIO[1] + ", Z:" + dimsIO[2] + ", C:" + dimsIO[3] + ", T:" + dimsIO[4];
+            String exportSize = "<strong>Exported Size</strong>: W: " + selected_wells.size() + ", F:" + selected_fields.size() + ", X:" + dimsIO[5] + ", Y:" + dimsIO[6] + ", Z:" + dimsIO[7] + ", C:" + dimsIO[8] + ", T:" + dimsIO[9];
 
             taskSummary = getMessage(bytes[0], bytes[1], opm.getPlateName(), oriSize, exportSize);
 

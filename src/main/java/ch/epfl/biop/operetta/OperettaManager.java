@@ -25,15 +25,13 @@ import ch.epfl.biop.operetta.utils.HyperRange;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.gui.Overlay;
 import ij.gui.Roi;
-import ij.io.Opener;
 import ij.measure.Calibration;
 import ij.plugin.HyperStackConverter;
 import ij.plugin.ZProjector;
-import ij.process.Blitter;
-import ij.process.ImageProcessor;
+import ij.process.*;
 import loci.formats.*;
+import loci.formats.in.MinimalTiffReader;
 import loci.formats.meta.IMetadata;
 import net.imglib2.Point;
 import ome.units.UNITS;
@@ -46,10 +44,11 @@ import org.perf4j.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -90,6 +89,8 @@ public class OperettaManager {
     private final File save_folder;
     private final Length px_size;
     private final double correction_factor = 0.995;
+    private final boolean flip_horizontal;
+    private final boolean flip_vertical;
 
     /**
      * OperettaManager Constructor. This constructor is private as you need to use the Builder class
@@ -108,6 +109,8 @@ public class OperettaManager {
                             HyperRange range,
                             double norm_min,
                             double norm_max,
+                            boolean flip_horizontal,
+                            boolean flip_vertical,
                             boolean is_projection,
                             int projection_type,
                             File save_folder) {
@@ -118,6 +121,9 @@ public class OperettaManager {
         this.range = range;
         this.norm_max = norm_max;
         this.norm_min = norm_min;
+        this.flip_horizontal = flip_horizontal;
+        this.flip_vertical = flip_vertical;
+
         this.is_projection = is_projection;
         this.projection_type = projection_type;
         this.save_folder = save_folder;
@@ -217,6 +223,9 @@ public class OperettaManager {
     public IMetadata getMetadata() {
         return this.metadata;
     }
+
+    private boolean isFlipX() { return flip_horizontal; }
+    private boolean isFlipY() { return flip_vertical; }
 
     /**
      * Returns the list of all Wells in the Experiment
@@ -515,6 +524,8 @@ public class OperettaManager {
         StopWatch sw = new StopWatch();
         sw.start();
 
+        OMEXMLMetadataRoot meta = (OMEXMLMetadataRoot) metadata.getRoot();
+
         ForkJoinPool planeWorkerPool = new ForkJoinPool(10);
         try {
             planeWorkerPool.submit(() -> IntStream.range(0, files.size())
@@ -526,13 +537,14 @@ public class OperettaManager {
                         Map<String, Integer> plane_indexes = range2.getIndexes(files.get(i));
                         if (range2.includes(files.get(i))) {
                             //IJ.log("files.get( "+i+" )+"+files.get( i ));
-                            ImagePlus imp = (new Opener()).openImage(files.get(i));// IJ.openImage( files.get( i ) );
+                            ImageProcessor ip = openTiffFileAsImageProcessor(files.get(i));
 
-                            if (imp == null) {
+                            if (flip_horizontal) { ip.flipHorizontal(); }
+                            if (flip_vertical) { ip.flipVertical(); }
+
+                            if (ip == null) {
                                 log.error("Could not open {}", files.get(i));
-                                //IJ.log( "Could not open "+ files.get( i ) );
                             } else {
-                                ImageProcessor ip = imp.getProcessor();
                                 if (do_norm) {
                                     ip.setMinAndMax(norm_min, norm_max);
                                     ip = ip.convertToShort(true);
@@ -548,8 +560,6 @@ public class OperettaManager {
                                 //IJ.log("plane_indexes.get( \"I\" ): " +plane_indexes.get( "I" ));
                                 stack.setProcessor(ip, plane_indexes.get("I"));
                                 stack.setSliceLabel(label, plane_indexes.get("I"));
-                                imp.close();
-                                //new ImagePlus("", stack).show();
                             }
                         }
                     })).get();
@@ -563,6 +573,54 @@ public class OperettaManager {
         return stack;
     }
 
+    private ImageProcessor openTiffFileAsImageProcessor(String imagePath)  {
+
+        try (IFormatReader reader = new MinimalTiffReader();)  {
+            reader.setId(imagePath);
+            // These images have a single plane, so it's always going to be series 0, plane 0
+             reader.setSeries(0);
+            int width = reader.getSizeX();
+            int height = reader.getSizeY();
+            byte[] bytes = reader.openBytes(0);
+            ByteOrder byteOrder = reader.isLittleEndian() ? ByteOrder.LITTLE_ENDIAN : ByteOrder.BIG_ENDIAN;
+
+            ImageProcessor ip;
+            switch (reader.getPixelType()) {
+                case FormatTools.UINT8:
+                    return new ByteProcessor(width,height, bytes, null);
+
+                case FormatTools.UINT16:
+                    ByteBuffer buffer = ByteBuffer.allocate(width * height * 2);
+                    buffer.put(bytes);
+
+                    short[] shorts = new short[width * height];
+                    buffer.flip();
+                    buffer.order(byteOrder).asShortBuffer().get(shorts);
+
+                    return new ShortProcessor(width,height, shorts, null);
+
+                case FormatTools.FLOAT:
+                    ByteBuffer forFloatBuffer = ByteBuffer.allocate(width * height * 4);
+                    forFloatBuffer.put(bytes);
+
+                    float[] floats = new float[width * height];
+                    forFloatBuffer.flip();
+                    forFloatBuffer.order(byteOrder).asFloatBuffer().get(floats);
+
+                    return new FloatProcessor(width,height, floats, null);
+
+                default:
+                    // DEATH
+                    log.error("No idea what the data type is for image "+ imagePath +" : " + reader.getPixelType() );
+                    return null;
+
+            }
+
+        } catch (IOException | FormatException e) {
+            log.error( e.getMessage() );
+            return null;
+        }
+    }
     /**
      * Returns a stitched stack for the given well and associated fields
      *
@@ -1220,6 +1278,19 @@ public class OperettaManager {
 
         private IFormatReader reader = null;
 
+        private boolean flip_horizontal = false;
+        private boolean flip_vertical = false;
+
+        public Builder flipHorizontal(boolean isFlip) {
+            this.flip_horizontal = isFlip;
+            return this;
+        }
+
+        public Builder flipVertical(boolean isFlip) {
+            this.flip_vertical = isFlip;
+            return this;
+        }
+
         /**
          * Determines whether the OperettaManager will Z Project the data before saving it, using {@link Builder#setProjectionMethod(String)}
          *
@@ -1347,6 +1418,8 @@ public class OperettaManager {
                         this.range,
                         this.norm_min,
                         this.norm_max,
+                        this.flip_horizontal,
+                        this.flip_vertical,
                         this.is_projection,
                         this.projection_method,
                         this.save_folder);
