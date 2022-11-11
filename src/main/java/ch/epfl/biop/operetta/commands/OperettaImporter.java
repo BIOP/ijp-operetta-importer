@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-3.0.html>.
@@ -55,17 +55,30 @@ public class OperettaImporter implements Command {
 
     @Override
     public void run() {
+        XMLFILE file = null;
+        for (XMLFILE version : XMLFILE.values()) {
+            File candidate = new File(folder, version.getIndexFileName());
+            if (candidate.exists()) {
+                file = version;
+                break;
+            }
+        }
         // A few checks and warning for big files
-        File f = new File(folder, "Index.idx.xml");
-        if (!f.exists()) {
-            IJ.log("Error, file " + f.getAbsolutePath() + " not found!");
+        if (file == null) {
+            IJ.log("Error, no matching Index files found in " + folder.getAbsolutePath());
+            IJ.log("Implemented valid Index files:");
+            for (XMLFILE version : XMLFILE.values()) {
+                IJ.log("\t" + version.getIndexFileName() + " (" + version.getDescription() + ")");
+            }
             return;
         }
 
+        // Open the file
+        File f = new File(folder, file.getIndexFileName());
         int sizeInMb = (int) ((double) FileUtils.sizeOf(f) / (double) (1024 * 1024));
         IJ.log("- Opening Operetta dataset " + f.getAbsolutePath() + " (" + sizeInMb + " Mb)");
 
-        File fmemo = new File(folder, ".Index.idx.xml.bfmemo");
+        File fmemo = new File(folder, "." + file.getIndexFileName() + ".bfmemo");
         int estimatedOpeningTimeInMin;
         if (!fmemo.exists()) {
             estimatedOpeningTimeInMin = sizeInMb / 30; // 30 Mb per minute
@@ -82,9 +95,10 @@ public class OperettaImporter implements Command {
         }
 
         final IFormatReader[] reader = new IFormatReader[1];
+        File finalF = f;
         Thread t = new Thread(() -> {
             try {
-                reader[0] = OperettaManager.createReader(f.getAbsolutePath());
+                reader[0] = OperettaManager.createReader(finalF.getAbsolutePath());
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (FormatException e) {
@@ -116,6 +130,32 @@ public class OperettaImporter implements Command {
                     .reader(reader[0]);
 
             cs.run(OperettaImporterInteractive.class, true, "opmBuilder", opmBuilder);
+        }
+
+    }
+
+    /**
+     * List the types of valid XML files we should be looking for
+     */
+    private enum XMLFILE {
+        V5("Index.idx.xml", "PerkinElmer Harmony V5"),
+        V5FLEX("Index.flex.xml", "PerkinElmer Harmony V5 Flatfield data"),
+        V6("Index.xml", "PerkinElmer Harmony V6");
+
+        private final String description;
+        private final String indexFileName;
+
+        XMLFILE(String indexFileName, String description) {
+            this.indexFileName = indexFileName;
+            this.description = description;
+        }
+
+        private String getIndexFileName() {
+            return this.indexFileName;
+        }
+
+        public String getDescription() {
+            return this.description;
         }
 
     }
