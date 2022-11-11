@@ -555,26 +555,30 @@ public class OperettaManager {
                             //IJ.log("files.get( "+i+" )+"+files.get( i ));
                             ImageProcessor ip = openTiffFileAsImageProcessor(files.get(i));
 
-                            if (flip_horizontal) {
-                                ip.flipHorizontal();
-                            }
-                            if (flip_vertical) {
-                                ip.flipVertical();
-                            }
-
                             if (ip == null) {
                                 log.error("Could not open {}", files.get(i));
                             } else {
+
+                                if (flip_horizontal) {
+                                    ip.flipHorizontal();
+                                }
+
+                                if (flip_vertical) {
+                                    ip.flipVertical();
+                                }
+
                                 if (do_norm) {
                                     ip.setMinAndMax(norm_min, norm_max);
                                     ip = ip.convertToShort(true);
                                 }
+
                                 if (subregion != null) {
                                     ip.setRoi(subregion);
                                     ip = ip.crop();
                                 }
 
                                 ip = ip.resize(ip.getWidth() / downscale, ip.getHeight() / downscale);
+
                                 // logger.info("File {}", files.get( i ));
                                 String label = String.format("R%d-C%d - (c:%d, z:%d, t:%d) - %s", row, column, plane_indexes.get("C"), plane_indexes.get("Z"), plane_indexes.get("T"), new File(files.get(i)).getName());
                                 //IJ.log("plane_indexes.get( \"I\" ): " +plane_indexes.get( "I" ));
