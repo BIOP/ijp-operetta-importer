@@ -61,48 +61,58 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     List<String> selected_wells_string = new ArrayList<>();
     List<String> selected_fields_string = new ArrayList<>();
 
-    @Parameter(label = "Downsample Factor", callback = "updateMessage")
+    private enum FLIP_MODE {
+        NONE("None", false, false),
+        HORIZONTAL("Flip horizontal", true, false),
+        VERTICAL("Flip vertical", false, true),
+        BOTH("Flip both", true, true);
+
+        FLIP_MODE(String name, boolean flipH, boolean flipV) {
+            this.name = name;
+            this.flipH = flipH;
+            this.flipV = flipV;
+        }
+
+        String getName() { return this.name; }
+
+        final String name;
+        final boolean flipH;
+        final boolean flipV;
+    }
+
+    @Parameter(label = "Downsample factor", callback = "updateMessage")
     int downsample = 4;
-    @Parameter(label = "Save Directory", style = FileWidget.DIRECTORY_STYLE)
+    @Parameter(label = "Save directory", style = FileWidget.DIRECTORY_STYLE)
     File save_directory = new File(System.getProperty("user.home") + File.separator);
 
-    @Parameter(label = "Selected Wells. Leave blank for all", callback = "updateMessage", required = false, persist = false)
+    @Parameter(label = "Selected wells. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_wells_str = "";
     @Parameter(label = "Choose Wells", callback = "wellChooser", required = false, persist = false)
     private Button chooseWells;
-    @Parameter(label = "Selected Fields. Leave blank for all", callback = "updateMessage", required = false, persist = false)
+    @Parameter(label = "Selected fields. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_fields_str = "";
-    @Parameter(label = "Choose Fields", callback = "fieldChooser", required = false, persist = false)
+    @Parameter(label = "Choose fields", callback = "fieldChooser", required = false, persist = false)
     private Button chooseFields;
-    @Parameter(label = "Fuse Fields", callback = "updateMessage", required = false)
+    @Parameter(label = "Fuse fields", callback = "updateMessage", required = false)
     private boolean is_fuse_fields = true;
-    @Parameter(label = "Roi Coordinates [x,y,w,h]. . Leave blank for full image", callback = "updateMessage", required = false)
-    private String roi_bounds = "";
-    @Parameter(label = "Open Well Slice", callback = "roiChooser", required = false, persist = false)
+    @Parameter(label = "Open well slice", callback = "roiChooser", required = false, persist = false)
     private Button openSlice;
-    @Parameter(label = "Get Roi From Open Well", callback = "roiSelector", required = false, persist = false)
-    private Button selectRoi;
 
-    @Parameter(label = "Flip Planes Horizontally", callback = "updateMessage", required = false)
-    private Boolean flip_horizontal;
-    @Parameter(label = "Flip Planes Vertically", callback = "updateMessage", required = false)
-    private Boolean flip_vertical;
+    @Parameter(label = "Flip images", callback = "updateMessage", choices={"None", "Flip horizontal", "Flip vertical", "Flip both"}, required = false)
+    private String flip_mode;
 
-    @Parameter(label = "Select Range", callback = "updateMessage", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
+    @Parameter(label = "Select ranges", callback = "updateMessage", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String range = "You can use commas or colons to separate ranges. eg. '1:10' or '1,3,5,8' ";
 
-    @Parameter(label = "Selected Channels. Leave blank for all", callback = "updateMessage", required = false)
+    @Parameter(label = "Selected channels. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_channels_str = "";
-    @Parameter(label = "Selected Slices. Leave blank for all", callback = "updateMessage", required = false)
+    @Parameter(label = "Selected slices. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_slices_str = "";
-    @Parameter(label = "Selected Timepoints. Leave blank for all", callback = "updateMessage", required = false)
+    @Parameter(label = "Selected timepoints. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_timepoints_str = "";
 
-    @Parameter(label = "Perform Projection of Data", callback = "updateMessage")
-    boolean is_projection = false;
-    @Parameter(label = "Projection Type", callback = "updateMessage", choices = {"Average Intensity", "Max Intensity", "Min Intensity", "Sum Slices", "Standard Deviation", "Median"})
-    String z_projection_method = "Max Intensity";
-
+    @Parameter(label = "Perform Projection of Data", choices = {"No Projection", "Average Intensity", "Max Intensity", "Min Intensity", "Sum Slices", "Standard Deviation", "Median"}, callback = "updateMessage")
+    String z_projection_method;
 
     @Parameter(label = "Choose Data Range", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String norm = "Useful if you have digital phase images which could be 32-bit";
@@ -176,6 +186,13 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
     private void updateMessage() {
         try {
+
+            // Choose flip mode
+            FLIP_MODE flip = FLIP_MODE.NONE;
+            for ( FLIP_MODE f : FLIP_MODE.values() ) {
+                if (f.getName().equals(this.flip_mode)){ flip = f; }
+            }
+
             HyperRange range = new HyperRange.Builder()
                     .setRangeC(this.selected_channels_str)
                     .setRangeZ(this.selected_slices_str)
@@ -184,10 +201,9 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
             opm = opmBuilder
                     .setRange(range)
-                    .flipHorizontal(this.flip_horizontal)
-                    .flipVertical(this.flip_vertical)
+                    .flipHorizontal(flip.flipH)
+                    .flipVertical(flip.flipV)
                     .setProjectionMethod(this.z_projection_method)
-                    .doProjection(this.is_projection)
                     .setSaveFolder(this.save_directory)
                     .setNormalization(norm_min, norm_max)
                     .build();
@@ -215,9 +231,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
             List<Integer> field_ids = selected_fields.stream().map(w -> Integer.parseInt(w.trim().split(" ")[1]) - 1).collect(Collectors.toList());
 
-            Roi roi = parseRoi(roi_bounds);
-
-            long[] bytes = opm.getIOBytes(wells, field_ids, this.downsample, roi, !is_fuse_fields);
+            long[] bytes = opm.getIOBytes(wells, field_ids, this.downsample, !is_fuse_fields);
 
             long[] dimsIO = opm.getIODimensions(downsample);
 
@@ -232,20 +246,6 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
     }
 
-    private void roiSelector() {
-        if (this.roiImage != null) {
-            Roi roi = this.roiImage.getRoi();
-
-            if (roi != null) {
-                this.roi_bounds = String.format("%d, %d, %d, %d",
-                        roi.getBounds().x * 8,
-                        roi.getBounds().y * 8,
-                        roi.getBounds().width * 8,
-                        roi.getBounds().height * 8);
-            }
-        }
-        updateMessage();
-    }
 
     private void wellChooser() {
         opm = opmBuilder.build();
@@ -272,20 +272,19 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     private void roiChooser() {
 
         opm = opmBuilder
-                .doProjection(is_projection)
                 .setProjectionMethod(z_projection_method)
                 .build();
 
         // If there is a range, update it, otherwise choose the first timepoint and the first z
         if (!this.selected_slices_str.equals("")) {
             opm.getRange().updateZRange(selected_slices_str);
-        } else if (this.selected_slices_str.equals("") && !this.is_projection) {
+        } else if (this.selected_slices_str.equals("") && this.z_projection_method.equals("No Projection")) {
             opm.getRange().updateZRange("1:1");
         }
 
         if (!this.selected_timepoints_str.equals("")) {
             opm.getRange().updateTRange(selected_timepoints_str);
-        } else if (this.selected_timepoints_str.equals("") && !this.is_projection) {
+        } else if (this.selected_timepoints_str.equals("") && this.z_projection_method.equals("No Projection")) {
             opm.getRange().updateTRange("1:1");
         }
 
@@ -320,55 +319,6 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
         this.roiImage = sample;
         updateMessage();
-    }
-
-    private void roiChooserLazy() {
-        opm = opmBuilder
-                .doProjection(is_projection)
-                .setProjectionMethod(z_projection_method)
-                .build();
-
-        IJ.log("Current Range: " + opm.getRange().toString());
-        // If there is a range, update it, otherwise choose the first timepoint and the first z
-        if (!this.selected_slices_str.equals("")) {
-            opm.getRange().updateZRange(selected_slices_str);
-        } else if (this.selected_slices_str.equals("") && this.is_projection) {
-            opm.getRange().updateZRange("1:1");
-        }
-
-        if (!this.selected_timepoints_str.equals("")) {
-            opm.getRange().updateTRange(selected_timepoints_str);
-        } else if (this.selected_timepoints_str.equals("") && this.is_projection) {
-            opm.getRange().updateTRange("1:1");
-        }
-
-        // Choose well to display
-        String selected_well;
-
-
-        // Get the first well that is selected
-        if (selected_wells_str.length() != 0)
-            selected_well = stringToList(selected_wells_str).get(0);
-        else {
-            selected_well = opm.getAvailableWellsString().get(0);
-        }
-
-        int row = getRow(selected_well);
-        int col = getColumn(selected_well);
-        Well well = opm.getWell(row, col);
-
-        ImagePlus sample;
-
-        ImgPlus<UnsignedShortType> image = TiledCellReader.createLazyImage(opm, well, 16);
-
-
-        //ij.ui( ).show( image );
-
-        sample = ImageJFunctions.wrap(image, "test");
-        sample.setTitle("Well: " + selected_well);
-        sample.show();
-        this.roiImage = sample;
-
     }
 
     int getRow(String well_str) {
@@ -408,7 +358,6 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         opm = opmBuilder
                 .setRange(range)
                 .setProjectionMethod(this.z_projection_method)
-                .doProjection(this.is_projection)
                 .setSaveFolder(this.save_directory)
                 .setNormalization(norm_min, norm_max)
 
@@ -438,7 +387,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
         List<Integer> field_ids = selected_fields.stream().map(w -> Integer.parseInt(w.trim().split(" ")[1]) - 1).collect(Collectors.toList());
 
-        Roi roi = parseRoi(roi_bounds);
+        Roi roi = null;
 
         // Write the associated macro command in new thread to allow for proper logging
         new Thread(() -> opm.process(wells, field_ids, this.downsample, roi, !is_fuse_fields)).start();
