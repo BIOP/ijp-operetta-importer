@@ -834,11 +834,10 @@ public class OperettaManager {
      * @param wells                all the Wells to process as a list
      * @param fields               all the Field IDs to process, as a list, set to null to process all
      * @param downscale            the downscale factor
-     * @param region               an optional Roi to export, set to null for whole image
      * @param is_fields_individual export each field individually or as a stitched well
      * @return number of bytes that will be read from the dataset and written to the export folder when calling {@link OperettaManager#process(List, List, int, Roi, boolean)}
      */
-    public long[] getIOBytes(List<Well> wells, List<Integer> fields, int downscale, Roi region, boolean is_fields_individual) {
+    public long[] getIOBytes(List<Well> wells, List<Integer> fields, int downscale, boolean is_fields_individual) {
 
         long nWells = wells.size();
         long nFields = fields.size();
@@ -1349,26 +1348,19 @@ public class OperettaManager {
         }
 
         /**
-         * Determines whether the OperettaManager will Z Project the data before saving it, using {@link Builder#setProjectionMethod(String)}
-         *
-         * @param do_projection true if we wish to perform a Z projection
-         * @return a Builder object, to continue building parameters
-         */
-        public Builder doProjection(boolean do_projection) {
-            this.is_projection = do_projection;
-            return this;
-        }
-
-        /**
-         * The projection method to use if we are using {@link Builder#doProjection(boolean)}
+         * The projection method to use
          *
          * @param method String that matches one of the strings in
          *               <a href="https://imagej.nih.gov/ij/developer/api/ij/plugin/ZProjector.html#METHODS">the ZProjector</a>
          * @return a Builder object, to continue building parameters
          */
         public Builder setProjectionMethod(String method) {
-            if (Arrays.asList(ZProjector.METHODS).contains(method))
+            if (Arrays.asList(ZProjector.METHODS).contains(method)) {
                 this.projection_method = Arrays.asList(ZProjector.METHODS).indexOf(method);
+                this.is_projection = true;
+            } else {
+                this.is_projection = false;
+            }
             return this;
         }
 

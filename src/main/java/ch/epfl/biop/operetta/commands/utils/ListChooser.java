@@ -22,6 +22,7 @@
 package ch.epfl.biop.operetta.commands.utils;
 
 import ch.epfl.biop.operetta.OperettaManager;
+import ij.plugin.ZProjector;
 import ome.xml.model.Well;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,7 +129,7 @@ public class ListChooser {
 
         OperettaManager op = new OperettaManager.Builder()
                 .setId(id)
-                .doProjection(true)
+                .setProjectionMethod("Max Intensity")
                 .setSaveFolder(new File("D:\\Demo"))
                 .build();
 
