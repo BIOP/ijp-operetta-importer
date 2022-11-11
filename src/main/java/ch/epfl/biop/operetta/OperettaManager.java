@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-3.0.html>.
@@ -57,7 +57,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -132,11 +131,24 @@ public class OperettaManager {
 
     }
 
-    public static String safeName(String nameUnsafe) {
+    /**
+     * The name can have special characters which we replace with underscores, for the file name export
+     *
+     * @param nameUnsafe The original name that should be sanitized
+     * @return a name with all unsafe characters turned to "_"
+     */
+    private static String safeName(String nameUnsafe) {
         return nameUnsafe.replaceAll("[^\\w\\s\\-_]", "_");
     }
 
-    public static void printTimingMessage(Instant start, double percentageCompleteness) {
+    /**
+     * Print some information about how long the processing is
+     *
+     * @param start                  When the processing started
+     * @param percentageCompleteness how far along we are along with teh processing globally. For instance how
+     *                               many wells are already processed
+     */
+    private static void printTimingMessage(Instant start, double percentageCompleteness) {
         long s = Duration.between(start, Instant.now()).getSeconds();
         String elapsedTime = String.format("%d:%02d:%02d", s / 3600, (s % 3600) / 60, (s % 60));
         double sPerPC = s / percentageCompleteness;
@@ -180,17 +192,13 @@ public class OperettaManager {
         return memo;
     }
 
-    public File getSaveFolder() {
-        return save_folder;
-    }
-
     /**
      * returns the minimum value to use for the normalization of images,
      * in case you have 32-bit (digital phase contrast) images in this Operetta Database
      *
      * @return the minimum value for normalization
      */
-    public double getNorm_min() {
+    public double getNormMin() {
         return norm_min;
     }
 
@@ -200,7 +208,7 @@ public class OperettaManager {
      *
      * @return the maximum value for normalization
      */
-    public double getNorm_max() {
+    public double getNormMax() {
         return norm_max;
     }
 
@@ -224,8 +232,13 @@ public class OperettaManager {
         return this.metadata;
     }
 
-    private boolean isFlipX() { return flip_horizontal; }
-    private boolean isFlipY() { return flip_vertical; }
+    private boolean isFlipX() {
+        return flip_horizontal;
+    }
+
+    private boolean isFlipY() {
+        return flip_vertical;
+    }
 
     /**
      * Returns the list of all Wells in the Experiment
@@ -240,7 +253,7 @@ public class OperettaManager {
         List<Well> nonEmptyWells = r.getPlate(0)
                 .copyWellList()
                 .stream()
-                .filter(well -> well.copyWellSampleList().get(0).getPositionX()!=null) // a weird way to check that the well was indeed imaged, see https://forum.image.sc/t/operetta-reader-bug-positions-not-parsed-found/61818
+                .filter(well -> well.copyWellSampleList().get(0).getPositionX() != null) // a weird way to check that the well was indeed imaged, see https://forum.image.sc/t/operetta-reader-bug-positions-not-parsed-found/61818
                 .collect(Collectors.toList());
         return nonEmptyWells;
     }
@@ -316,6 +329,11 @@ public class OperettaManager {
 
     }
 
+    /**
+     * Return the name of the plate with special characters replaced
+     *
+     * @return the safe name of the plate
+     */
     public String getPlateName() {
         return safeName(metadata.getPlateName(0));
     }
@@ -524,8 +542,6 @@ public class OperettaManager {
         StopWatch sw = new StopWatch();
         sw.start();
 
-        OMEXMLMetadataRoot meta = (OMEXMLMetadataRoot) metadata.getRoot();
-
         ForkJoinPool planeWorkerPool = new ForkJoinPool(10);
         try {
             planeWorkerPool.submit(() -> IntStream.range(0, files.size())
@@ -539,8 +555,12 @@ public class OperettaManager {
                             //IJ.log("files.get( "+i+" )+"+files.get( i ));
                             ImageProcessor ip = openTiffFileAsImageProcessor(files.get(i));
 
-                            if (flip_horizontal) { ip.flipHorizontal(); }
-                            if (flip_vertical) { ip.flipVertical(); }
+                            if (flip_horizontal) {
+                                ip.flipHorizontal();
+                            }
+                            if (flip_vertical) {
+                                ip.flipVertical();
+                            }
 
                             if (ip == null) {
                                 log.error("Could not open {}", files.get(i));
@@ -573,21 +593,30 @@ public class OperettaManager {
         return stack;
     }
 
-    private ImageProcessor openTiffFileAsImageProcessor(String imagePath)  {
+    /**
+     * Internal single tiff plane reader. We assume all tiff images are single
+     * plane images that can be 8, 16 or 32 bits.
+     *
+     * @param id the path to the tiff image, which will be opened by MinimalTiffReader
+     * @return an ImageProcessor class corresponding ot he bit depth of the image plane
+     */
+    private ImageProcessor openTiffFileAsImageProcessor(String id) {
 
-        try (IFormatReader reader = new MinimalTiffReader();)  {
-            reader.setId(imagePath);
+        try (IFormatReader reader = new MinimalTiffReader()) {
+            reader.setId(id);
             // These images have a single plane, so it's always going to be series 0, plane 0
-             reader.setSeries(0);
+            reader.setSeries(0);
+
             int width = reader.getSizeX();
             int height = reader.getSizeY();
             byte[] bytes = reader.openBytes(0);
+
+            // Some amusing operations to get the right ImageProcessor
             ByteOrder byteOrder = reader.isLittleEndian() ? ByteOrder.LITTLE_ENDIAN : ByteOrder.BIG_ENDIAN;
 
-            ImageProcessor ip;
             switch (reader.getPixelType()) {
                 case FormatTools.UINT8:
-                    return new ByteProcessor(width,height, bytes, null);
+                    return new ByteProcessor(width, height, bytes, null);
 
                 case FormatTools.UINT16:
                     ByteBuffer buffer = ByteBuffer.allocate(width * height * 2);
@@ -597,7 +626,7 @@ public class OperettaManager {
                     buffer.flip();
                     buffer.order(byteOrder).asShortBuffer().get(shorts);
 
-                    return new ShortProcessor(width,height, shorts, null);
+                    return new ShortProcessor(width, height, shorts, null);
 
                 case FormatTools.FLOAT:
                     ByteBuffer forFloatBuffer = ByteBuffer.allocate(width * height * 4);
@@ -607,20 +636,20 @@ public class OperettaManager {
                     forFloatBuffer.flip();
                     forFloatBuffer.order(byteOrder).asFloatBuffer().get(floats);
 
-                    return new FloatProcessor(width,height, floats, null);
+                    return new FloatProcessor(width, height, floats, null);
 
                 default:
                     // DEATH
-                    log.error("No idea what the data type is for image "+ imagePath +" : " + reader.getPixelType() );
+                    log.error("No idea what the data type is for image " + id + " : " + reader.getPixelType());
                     return null;
-
             }
 
         } catch (IOException | FormatException e) {
-            log.error( e.getMessage() );
+            log.error(e.getMessage());
             return null;
         }
     }
+
     /**
      * Returns a stitched stack for the given well and associated fields
      *
@@ -680,7 +709,7 @@ public class OperettaManager {
 
             final int field_counter = ai.getAndIncrement();
 
-            if (subregion!=null) {
+            if (subregion != null) {
                 final Point pos = getFieldAdjustedCoordinates(field, bounds, subregion, topleft, downscale);
                 log.info(String.format("Sample Position: %d, %d", pos.getLongPosition(0), pos.getLongPosition(1)));
 
@@ -828,6 +857,14 @@ public class OperettaManager {
         return new long[]{sX * sY * nTotalPlanes * nFields * nWells * (long) 2, sXOut * sYOut * sZOut * sCOut * sTOut * nFieldsOut * nWells * (long) 2}; // Assuming 16 bits images
     }
 
+    /**
+     * Returns all dimensions fo the data that we wish to export for size and time estimations
+     *
+     * @param downscale an eventual downscale factor
+     * @return an array with the full dataset sizes(sX, sY, sZ, sC, sT) and selected or
+     * downscaled sizes (sXOut, sYOut, sZOut, sCOut, sTOut)
+     */
+
     public long[] getIODimensions(int downscale) {
         long sX = main_reader.getSizeX();
         long sY = main_reader.getSizeY();
@@ -880,7 +917,7 @@ public class OperettaManager {
             for (WellSample sample : samples) {
                 String name = getFinalFieldImageName(sample);
                 Point pos = getUncalibratedCoordinates(sample);
-                if (pos!=null) {
+                if (pos != null) {
                     writer.write(String.format("%s.tif;      ;               (%d.0, %d.0%s)\n", name, pos.getLongPosition(0) / downscale, pos.getLongPosition(1) / downscale, z));
                 } else {
                     writer.write(String.format("# %s.tif;      ;               (NaN, NaN%s)\n", name, z));
@@ -932,7 +969,7 @@ public class OperettaManager {
         }).collect(Collectors.toList());
         //imp.show();
         // Sort through them
-        IJ.log("Selected Samples: " + selected.toString());
+        IJ.log("Selected Samples: " + selected);
         return selected;
     }
 
@@ -951,10 +988,10 @@ public class OperettaManager {
      * Convenience function to make an ImagePlus out of the exported stack, with proper metadata
      * Will also handle the Z Projection if any
      *
-     * @param stack the Stack produced
-     * @param fields  all the fields that make up this image
-     * @param range the range, for metadata purposes, can be null
-     * @param name  the final name for the ImagePlus
+     * @param stack  the Stack produced
+     * @param fields all the fields that make up this image
+     * @param range  the range, for metadata purposes, can be null
+     * @param name   the final name for the ImagePlus
      * @return a calibrated ImagePlus
      */
     private ImagePlus makeImagePlus(ImageStack stack, List<WellSample> fields, HyperRange range, String name) {
@@ -978,7 +1015,7 @@ public class OperettaManager {
         cal.setZUnit(meta.getZUnit());
         cal.setTimeUnit(meta.getTimeUnit());
         // Do the projection if needed
-        if ((this.is_projection)&&(result.getNSlices()>1)) {
+        if ((this.is_projection) && (result.getNSlices() > 1)) {
             ZProjector zp = new ZProjector();
             zp.setImage(result);
             zp.setMethod(this.projection_type);
@@ -996,9 +1033,6 @@ public class OperettaManager {
         cal.yOrigin = point.getDoublePosition(1);
 
         result.setCalibration(cal);
-
-
-
 
         return result;
     }
@@ -1019,7 +1053,7 @@ public class OperettaManager {
         y = 0;
         int sample_id = field.getIndex().getValue();
 
-        if ((metadata.getPixelsSizeX(sample_id) != null)&&(metadata.getPixelsSizeY(sample_id) != null)) {
+        if ((metadata.getPixelsSizeX(sample_id) != null) && (metadata.getPixelsSizeY(sample_id) != null)) {
             w = metadata.getPixelsSizeX(sample_id).getValue();
             h = metadata.getPixelsSizeY(sample_id).getValue();
         } else {
@@ -1028,7 +1062,7 @@ public class OperettaManager {
 
         Point coordinates = getUncalibratedCoordinates(field);
 
-        if (coordinates==null) return null;
+        if (coordinates == null) return null;
 
         coordinates.move(new long[]{-topleft.getLongPosition(0), -topleft.getLongPosition(1)});
         if (bounds != null) {
@@ -1087,7 +1121,7 @@ public class OperettaManager {
     private Point getUncalibratedCoordinates(WellSample field) {
         Long px = getUncalibratedPositionX(field);
         Long py = getUncalibratedPositionY(field);
-        if ((px==null)||(py==null)) {
+        if ((px == null) || (py == null)) {
             return null;
         }
         return new Point(px, py);
@@ -1120,8 +1154,6 @@ public class OperettaManager {
         // We need to offset the coordinates by the global minimum (topleft) coordinates
         pos.setPosition(new long[]{(pos.getLongPosition(0)) / downscale, (pos.getLongPosition(1)) / downscale});
         return pos;
-
-
     }
 
     /**
@@ -1147,7 +1179,6 @@ public class OperettaManager {
         //IJ.log("Top Left Point: " + p);
 
         return p;
-
     }
 
     /**
@@ -1168,7 +1199,6 @@ public class OperettaManager {
         //IJ.log("Top Left Point: " + p);
 
         return p;
-
     }
 
 
@@ -1181,7 +1211,7 @@ public class OperettaManager {
     public Point getBottomRightCoordinates(List<WellSample> fields) {
         fields = fields.stream().filter(sample -> sample.getPositionY() != null).collect(Collectors.toList());
 
-        if (fields.size()!=0) {
+        if (fields.size() != 0) {
             WellSample maxx = fields.stream().max(Comparator.comparing(WellSample::getPositionX)).get();
             WellSample maxy = fields.stream().max(Comparator.comparing(WellSample::getPositionY)).get();
 
@@ -1199,9 +1229,14 @@ public class OperettaManager {
         }
     }
 
+    /**
+     * Get the image calibration from the OMEXML Metadata
+     *
+     * @return an ImageJ Calibration to use on an ImagePlus
+     */
     public Calibration getCalibration() {
         // Get the dimensions
-        int[] czt = range == null ? this.range.getCZTDimensions() : range.getCZTDimensions();
+        int[] czt = this.range.getCZTDimensions();
 
         double px_size = 1;
         double px_depth = 1;
@@ -1224,7 +1259,7 @@ public class OperettaManager {
         // Trick to get the times: It is the deltaT between timepoints of any image, so we need the deltaT if the second timepoint
         // which is ( nChannels * nSlices ) planes later
 
-        if (range.getCZTDimensions()[2]>1) { // We need at least a second timepoint !!
+        if (range.getCZTDimensions()[2] > 1) { // We need at least a second timepoint !!
             Time apx_time = metadata.getPixelsTimeIncrement(0) == null ? metadata.getPlaneDeltaT(0, czt[0] * czt[1]) : null;
             if (apx_time != null) {
                 px_time = apx_time.value(UNITS.SECOND).doubleValue();
@@ -1281,11 +1316,29 @@ public class OperettaManager {
         private boolean flip_horizontal = false;
         private boolean flip_vertical = false;
 
+        /**
+         * Flip the individual tiles Horizontally.
+         * This information is encoded by PerkinElmer in a transformation matrix
+         * But we do not have access to it from Bioformats and Bioformats only uses it for positioning
+         * So flips in the coordinates (-1 in the matrix) are not actually handled.
+         *
+         * @param isFlip is the data flipped Horizontally
+         * @return a Builder object, to continue building parameters
+         */
         public Builder flipHorizontal(boolean isFlip) {
             this.flip_horizontal = isFlip;
             return this;
         }
 
+        /**
+         * Flip the individual tiles Vertically.
+         * This information is encoded by PerkinElmer in a transformation matrix
+         * But we do not have access to it from Bioformats and Bioformats only uses it for positioning
+         * So flips in the coordinates (-1 in the matrix) are not actually handled.
+         *
+         * @param isFlip is the data flipped Vertically
+         * @return a Builder object, to continue building parameters
+         */
         public Builder flipVertical(boolean isFlip) {
             this.flip_vertical = isFlip;
             return this;

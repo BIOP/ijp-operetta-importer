@@ -53,8 +53,8 @@ public class ImageFetcher {
 
 
     public ImageFetcher(OperettaManager opm) {
-        this.max_scale = opm.getNorm_max();
-        this.min_scale = opm.getNorm_min();
+        this.max_scale = opm.getNormMax();
+        this.min_scale = opm.getNormMin();
 
         generateHash(opm);
     }
