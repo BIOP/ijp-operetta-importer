@@ -862,7 +862,7 @@ public class OperettaManager {
     }
 
     /**
-     * Returns all dimensions fo the data that we wish to export for size and time estimations
+     * Returns all dimensions for the data that we wish to export for size and time estimations
      *
      * @param downscale an eventual downscale factor
      * @return an array with the full dataset sizes(sX, sY, sZ, sC, sT) and selected or
