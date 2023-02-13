@@ -411,7 +411,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         ij.ui().showUI();
 
         // invoke the plugin
-        ij.command().run(OperettaImporter.class, true);
+        // ij.command().run(OperettaImporter.class, true);
     }
 
     public void initialize(){

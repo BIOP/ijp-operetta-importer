@@ -467,7 +467,7 @@ public class OperettaManager {
      */
     public ImagePlus getWellImage(Well well, List<WellSample> fields, int downscale, HyperRange range, Roi subregion) {
 
-        return makeImagePlus(readSingleWell(well, fields, downscale, range, subregion), well.copyWellSampleList(), range, getFinalWellImageName(well));
+        return makeImagePlus(readSingleWell(well, fields, downscale, range, subregion), fields, range, getFinalWellImageName(well));
     }
 
     /**
@@ -1032,8 +1032,8 @@ public class OperettaManager {
         // Do the calibration for the origin
         Point point = getTopLeftCoordinatesUm(fields);
 
-        cal.xOrigin = point.getDoublePosition(0);
-        cal.yOrigin = point.getDoublePosition(1);
+        cal.xOrigin = point.getDoublePosition(0)/cal.pixelWidth; // That's supposed to be in pixels
+        cal.yOrigin = point.getDoublePosition(1)/cal.pixelHeight;
 
         result.setCalibration(cal);
 
@@ -1199,7 +1199,6 @@ public class OperettaManager {
         Long px = minx.getPositionX().value(UNITS.MICROMETER).longValue();
         Long py = miny.getPositionY().value(UNITS.MICROMETER).longValue();
         Point p = new Point(px, py);
-        //IJ.log("Top Left Point: " + p);
 
         return p;
     }
