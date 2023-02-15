@@ -1191,7 +1191,10 @@ public class OperettaManager {
      * @return a point with the xy pixel coordinates
      */
     public Point getTopLeftCoordinatesUm(java.util.List<WellSample> fields) {
-        fields = fields.stream().filter(sample -> sample.getPositionX() != null).collect(Collectors.toList());
+        fields = fields.stream()
+                .filter(sample -> sample.getPositionX() != null)
+                .filter(sample -> sample.getPositionX().value() != null)
+                .collect(Collectors.toList());
 
         WellSample minx = fields.stream().min(Comparator.comparing(WellSample::getPositionX)).get();
         WellSample miny = fields.stream().min(Comparator.comparing(WellSample::getPositionY)).get();
