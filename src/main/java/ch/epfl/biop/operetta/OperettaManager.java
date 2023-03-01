@@ -350,7 +350,7 @@ public class OperettaManager {
         int row = field.getWell().getRow().getValue() + 1;
         int col = field.getWell().getColumn().getValue() + 1;
         String field_id = field.getID();
-        String local_field_id = field_id.substring(Integer.valueOf(field_id.lastIndexOf(":")) + 1);
+        String local_field_id = field_id.substring(field_id.lastIndexOf(":") + 1);
 
 
         String project = safeName(field.getWell().getPlate().getName());
@@ -773,7 +773,7 @@ public class OperettaManager {
 
         Instant global_start = Instant.now();
 
-        double percentageCompleteness = 0;
+        double percentageCompleteness;
 
         for (Well well : wells) {
             log.info("Well: {}", well);
@@ -837,7 +837,7 @@ public class OperettaManager {
      * @param fields               all the Field IDs to process, as a list, set to null to process all
      * @param downscale            the downscale factor
      * @param is_fields_individual export each field individually or as a stitched well
-     * @return number of bytes that will be read from the dataset and written to the export folder when calling {@link OperettaManager#process(List, List, int, Roi, boolean)}
+     * @return array of bytes that will be read from the dataset and written to the export folder when calling {@link OperettaManager#process(List, List, int, Roi, boolean)}
      */
     public long[] getIOBytes(List<Well> wells, List<Integer> fields, int downscale, boolean is_fields_individual) {
 
@@ -943,7 +943,7 @@ public class OperettaManager {
     }
 
     /**
-     * Finds fields related to the bounds that were given, so as to limit the number of files to export
+     * Finds fields related to the bounds that were given, to limit the number of files to export
      *
      * @param fields the fileds to check intersections in
      * @param bounds the roi for which we are looking for the intersecting fields
@@ -959,11 +959,23 @@ public class OperettaManager {
 
         Point topleft = getTopLeftCoordinates(fields);
 
+        if (topleft == null) {
+            log.error("No coordinates found for fields "+fields.toString()+" -> returning all fields.");
+            return fields;
+        }
+
         List<WellSample> selected = fields.stream().filter(s -> {
 
             int sample_id = s.getIndex().getValue();
-            long x = getUncalibratedPositionX(s) - topleft.getLongPosition(0);
-            long y = getUncalibratedPositionY(s) - topleft.getLongPosition(1);
+
+            Long pX = getUncalibratedPositionX(s);
+            if (pX == null) return false;
+
+            Long pY = getUncalibratedPositionY(s);
+            if (pY == null) return false;
+
+            long x = pX - topleft.getLongPosition(0);
+            long y = pY - topleft.getLongPosition(1);
             int w = metadata.getPixelsSizeX(sample_id).getValue();
             int h = metadata.getPixelsSizeY(sample_id).getValue();
 
@@ -1052,7 +1064,7 @@ public class OperettaManager {
      */
     private Roi getFieldSubregion(WellSample field, Roi bounds, Point topleft) {
 
-        // The field always contains the subregion so we avoid checking for overlap
+        // The field always contains the subregion, so we avoid checking for overlap
         long x, y, w, h;
         x = 0;
         y = 0;
@@ -1120,7 +1132,7 @@ public class OperettaManager {
     /**
      * Returns the position of the field in pixels as a Point
      *
-     * @param field the field for which we need to coordinates
+     * @param field the field for which we need to find the coordinates
      * @return a 2D Point with the xy pixel position of the fieldgit staguit
      */
     private Point getUncalibratedCoordinates(WellSample field) {
@@ -1147,6 +1159,10 @@ public class OperettaManager {
         //return new Point(subregion.getBounds().x, subregion.getBounds().y);
 
         Point pos = getUncalibratedCoordinates(field);
+
+        if (pos == null) {
+            log.error("Could not find position for field "+field);
+        }
 
         // After this, pos is the absolute position of the current sample in pixels and that should be it
         pos.move(new long[]{-topleft.getLongPosition(0), -topleft.getLongPosition(1)});
@@ -1400,7 +1416,7 @@ public class OperettaManager {
         }
 
         /**
-         * As an alternative to using a id, when the dataset is big, one can provide
+         * As an alternative to using an id, when the dataset is big, one can provide
          * am already existing reader, which is a way to optimise the opening of a dataset
          *
          * @param reader the reader
@@ -1472,6 +1488,7 @@ public class OperettaManager {
 
                 if (this.save_folder == null) {
                     //TODO
+                    log.warn("You did not specify a save path for the Operetta Manager object");
                 }
 
                 return new OperettaManager(reader,

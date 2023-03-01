@@ -64,8 +64,8 @@ public class ImageFetcher {
         this.files_hash = new Hashtable<>(opm.getReader().getUsedFiles(true).length);
 
 
-        opm.getAvailableWells().stream().forEach(w -> {
-            w.copyWellSampleList().stream().forEach(s -> {
+        opm.getAvailableWells().forEach(w -> {
+            w.copyWellSampleList().forEach(s -> {
                 opm.getReader().setSeries(s.getIndex().getValue());
                 Arrays.stream(opm.getReader().getSeriesUsedFiles(true)).parallel().forEach(f -> {
                     // Parse the file name

@@ -22,7 +22,6 @@
 package ch.epfl.biop.operetta.commands.utils;
 
 import ch.epfl.biop.operetta.OperettaManager;
-import ij.plugin.ZProjector;
 import ome.xml.model.Well;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +49,7 @@ public class ListChooser {
         label.setPreferredSize(new Dimension(50, 40));
 
 
-        JList list = new JList(things.toArray());
+        JList<String> list = new JList<>(things.toArray(new String[0]));
         JScrollPane scroll_list = new JScrollPane(list);
         scroll_list.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -69,7 +68,7 @@ public class ListChooser {
             // Return the values
             int[] res = list.getSelectedIndices();
             selected_things.clear();
-            selected_things.addAll(Arrays.stream(res).boxed().map(i -> things.get(i)).collect(Collectors.toList()));
+            selected_things.addAll(Arrays.stream(res).boxed().map(things::get).collect(Collectors.toList()));
         }
     }
 
@@ -80,12 +79,12 @@ public class ListChooser {
 
         // Make rows
 
-        Vector<Vector> data = new Vector<>();
+        Vector<Vector<String>> data = new Vector<>();
         Vector<String> col_names = new Vector<>();
 
         for (int r = 0; r < nrows; r++) {
 
-            Vector<String> row = new Vector<String>();
+            Vector<String> row = new Vector<>();
 
             for (int c = 0; c < ncols; c++) {
                 row.addElement(String.format("R%d-C%d", r, c));

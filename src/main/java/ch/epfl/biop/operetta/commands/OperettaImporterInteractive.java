@@ -23,15 +23,11 @@ package ch.epfl.biop.operetta.commands;
 
 import ch.epfl.biop.operetta.OperettaManager;
 import ch.epfl.biop.operetta.commands.utils.ListChooser;
-import ch.epfl.biop.operetta.commands.utils.TiledCellReader;
 import ch.epfl.biop.operetta.utils.HyperRange;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Roi;
 import net.imagej.ImageJ;
-import net.imagej.ImgPlus;
-import net.imglib2.img.display.imagej.ImageJFunctions;
-import net.imglib2.type.numeric.integer.UnsignedShortType;
 import ome.xml.model.Well;
 import ome.xml.model.WellSample;
 import org.scijava.Initializable;
@@ -52,9 +48,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("FieldMayBeFinal")
 @Plugin(type = Command.class)
 public class OperettaImporterInteractive extends InteractiveCommand implements Initializable {
-    private ImagePlus roiImage;
     @Parameter(required = false)
     OperettaManager.Builder opmBuilder;
     OperettaManager opm;
@@ -95,7 +91,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     private Button chooseFields;
     @Parameter(label = "Fuse fields", callback = "updateMessage", required = false)
     private boolean is_fuse_fields = true;
-    @Parameter(label = "Open well slice", callback = "roiChooser", required = false, persist = false)
+    @Parameter(label = "Preview well slice", callback = "previewWell", required = false, persist = false)
     private Button openSlice;
 
     @Parameter(label = "Flip images", callback = "updateMessage", choices={"None", "Flip horizontal", "Flip vertical", "Flip both"}, required = false)
@@ -251,6 +247,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         opm = opmBuilder.build();
         ListChooser.create("Wells", opm.getAvailableWellsString(), selected_wells_string);
         selected_wells_str = selected_wells_string.toString();
+        if (selected_wells_str.equals("[]")) selected_wells_str = "";
         updateMessage();
     }
 
@@ -258,6 +255,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         opm = opmBuilder.build();
         ListChooser.create("Fields", opm.getAvailableFieldsString(), selected_fields_string);
         selected_fields_str = selected_fields_string.toString();
+        if (selected_slices_str.equals("[]")) selected_fields_str = "";
         updateMessage();
     }
 
@@ -269,7 +267,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         return result;
     }
 
-    private void roiChooser() {
+    private void previewWell() {
 
         opm = opmBuilder
                 .setProjectionMethod(z_projection_method)
@@ -305,7 +303,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
 
         ImagePlus sample;
-        if (!is_fuse_fields && !selected_fields_string.equals("")) {
+        if (!is_fuse_fields && !selected_fields_str.equals("")) {
             WellSample field = opm.getField(well, getFields().get(0));
 
             sample = opm.getFieldImage(field, 8);
@@ -317,7 +315,6 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         sample.show();
         IJ.log("Downsampled well opening done.");
 
-        this.roiImage = sample;
         updateMessage();
     }
 
@@ -387,26 +384,15 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
         List<Integer> field_ids = selected_fields.stream().map(w -> Integer.parseInt(w.trim().split(" ")[1]) - 1).collect(Collectors.toList());
 
-        Roi roi = null;
-
         // Write the associated macro command in new thread to allow for proper logging
-        new Thread(() -> opm.process(wells, field_ids, this.downsample, roi, !is_fuse_fields)).start();
+        new Thread(() -> opm.process(wells, field_ids, this.downsample, null, !is_fuse_fields)).start(); // region is always null in the interactive command
 
-    }
-
-    private Roi parseRoi(String roi_string) {
-
-        Roi bounds = null;
-        if (roi_string.length() != 0) {
-            String[] s = roi_string.split(",");
-            if (s.length == 4)
-                bounds = new Roi(Integer.parseInt(s[0].trim()), Integer.parseInt(s[1].trim()), Integer.parseInt(s[2].trim()), Integer.parseInt(s[3].trim()));
-        }
-        return bounds;
     }
 
     public static void main(final String... args) throws Exception {
+
         // create the ImageJ application context with all available services
+
         final ImageJ ij = new ImageJ();
         ij.ui().showUI();
 

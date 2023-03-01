@@ -95,13 +95,11 @@ public class OperettaImporter implements Command {
         }
 
         final IFormatReader[] reader = new IFormatReader[1];
-        File finalF = f;
+        //File finalF = f;
         Thread t = new Thread(() -> {
             try {
-                reader[0] = OperettaManager.createReader(finalF.getAbsolutePath());
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (FormatException e) {
+                reader[0] = OperettaManager.createReader(f.getAbsolutePath());
+            } catch (IOException | FormatException e) {
                 e.printStackTrace();
             }
         });

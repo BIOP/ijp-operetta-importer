@@ -24,7 +24,6 @@ package ch.epfl.biop.operetta;
 import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
 import loci.formats.MetadataTools;
-import loci.formats.in.OperettaReader;
 import loci.formats.meta.IMetadata;
 import ome.units.UNITS;
 import ome.units.quantity.Length;
@@ -34,7 +33,7 @@ import java.time.Instant;
 
 public class TestBugOperetta {
 
-    public final static void main(String... args) throws Exception {
+    public static void main(String... args) throws Exception {
         String operettaDatasetPath = "Z:\\public\\radiana.ferrero_UPDEPLA\\BUG_operetta_importer\\Images\\Index.idx.xml";
         //String operettaDatasetPath = "Z:\\temp-Nico\\20211006\\RPE1_mScarletCep63_GFPCep135_CollagenMatek35mmBin2_7hpostCent__2021-10-05T19_11_56-Measurement 2\\Images\\Index.idx.xml";
         //String operettaDatasetPath = "C:\\Users\\chiarutt\\Downloads\\f\\Index.idx.xml";

@@ -60,7 +60,7 @@ public class HyperRange {
         Arrays.stream(sr).forEach(r -> {
                     String[] sr2 = r.split(":");
                     if (sr2.length == 2) {
-                        List<Integer> subrange = IntStream.rangeClosed(Integer.valueOf(sr2[0].trim()), Integer.valueOf(sr2[1].trim()))
+                        List<Integer> subrange = IntStream.rangeClosed(Integer.parseInt(sr2[0].trim()), Integer.parseInt(sr2[1].trim()))
                                 .boxed().collect(Collectors.toList());
                         range.addAll(subrange);
                     } else {
