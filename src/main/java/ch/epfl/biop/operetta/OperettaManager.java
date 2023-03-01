@@ -87,7 +87,7 @@ public class OperettaManager {
     private final int projection_type;
     private final File save_folder;
     private final Length px_size;
-    private final double correction_factor = 0.995;
+    private final double correction_factor;
     private final boolean flip_horizontal;
     private final boolean flip_vertical;
 
@@ -112,7 +112,8 @@ public class OperettaManager {
                             boolean flip_vertical,
                             boolean is_projection,
                             int projection_type,
-                            File save_folder) {
+                            File save_folder,
+                            double correction_factor) {
 
         this.id = new File(reader.getCurrentFile());
         this.main_reader = reader;
@@ -126,6 +127,7 @@ public class OperettaManager {
         this.is_projection = is_projection;
         this.projection_type = projection_type;
         this.save_folder = save_folder;
+        this.correction_factor = correction_factor;
 
         this.px_size = metadata.getPixelsPhysicalSizeX(0);
 
@@ -1311,6 +1313,8 @@ public class OperettaManager {
 
         private HyperRange range = null;
 
+        private double correction_factor = 0.995;
+
         private boolean is_projection = false;
         private int projection_method = ZProjector.MAX_METHOD;
 
@@ -1431,6 +1435,11 @@ public class OperettaManager {
             return this;
         }
 
+        public Builder coordinatesCorrectionFactor(double correction_factor) {
+            this.correction_factor = correction_factor;
+            return this;
+        }
+
         /**
          * The build method handles creating an {@link OperettaManager} object from all the settings that were provided.
          * This is done so that everything, like the {@link HyperRange} that is defined is valid.
@@ -1473,7 +1482,8 @@ public class OperettaManager {
                         this.flip_vertical,
                         this.is_projection,
                         this.projection_method,
-                        this.save_folder);
+                        this.save_folder,
+                        this.correction_factor);
 
             } catch (Exception e) {
                 log.error("Issue when creating reader for file {}", id);
