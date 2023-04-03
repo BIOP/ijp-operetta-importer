@@ -147,5 +147,19 @@
 		</dependency>
 	</dependencies>
 
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>3.5.0</version>
+				<configuration>
+					<outputDirectory>${project.basedir}/docs</outputDirectory>
+					<reportOutputDirectory>${project.basedir}/docs</reportOutputDirectory>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
 
 </project>
