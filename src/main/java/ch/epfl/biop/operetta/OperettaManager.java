@@ -1200,7 +1200,7 @@ public class OperettaManager {
         Optional<WellSample> minx = fields.stream().min(Comparator.comparing(WellSample::getPositionX));
         Optional<WellSample> miny = fields.stream().min(Comparator.comparing(WellSample::getPositionY));
 
-        if (!minx.isPresent() || miny.isPresent()) {
+        if (!minx.isPresent() || !miny.isPresent()) {
             log.info("Could not find top left coordinates for fields");
             return null;
         }
@@ -1226,7 +1226,7 @@ public class OperettaManager {
         Optional<WellSample> minx = fields.stream().min(Comparator.comparing(WellSample::getPositionX));
         Optional<WellSample> miny = fields.stream().min(Comparator.comparing(WellSample::getPositionY));
 
-        if (!minx.isPresent() || miny.isPresent()) {
+        if (!minx.isPresent() || !miny.isPresent()) {
             log.info("Could not find top left coordinates for fields");
             return new Point(0,0);
         }
@@ -1252,7 +1252,7 @@ public class OperettaManager {
             Optional<WellSample> maxx = fields.stream().max(Comparator.comparing(WellSample::getPositionX));
             Optional<WellSample> maxy = fields.stream().max(Comparator.comparing(WellSample::getPositionY));
 
-            if (!maxx.isPresent() || maxy.isPresent()) {
+            if (!maxx.isPresent() || !maxy.isPresent()) {
                 log.info("Could not find top left coordinates for fields");
                 return null;
             }
