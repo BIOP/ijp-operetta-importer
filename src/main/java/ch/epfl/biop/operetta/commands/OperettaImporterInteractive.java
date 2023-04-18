@@ -194,9 +194,8 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
             opm = opmBuilder
                     .setRange(range)
                     .flipHorizontal(flipMode.flipH)
-                    .flipVertical(flipMode.flipH)
+                    .flipVertical(flipMode.flipV)
                     .setProjectionMethod(this.z_projection_method)
-                    .setSaveFolder(this.save_directory)
                     .setNormalization(norm_min, norm_max)
                     .build();
 
