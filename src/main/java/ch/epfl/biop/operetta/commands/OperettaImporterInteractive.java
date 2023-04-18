@@ -26,6 +26,7 @@ import ch.epfl.biop.operetta.commands.utils.ListChooser;
 import ch.epfl.biop.operetta.utils.HyperRange;
 import ij.IJ;
 import ij.ImagePlus;
+import ij.Prefs;
 import ij.gui.Roi;
 import net.imagej.ImageJ;
 import ome.xml.model.Well;
@@ -51,6 +52,7 @@ import java.util.stream.Collectors;
 @SuppressWarnings("FieldMayBeFinal")
 @Plugin(type = Command.class)
 public class OperettaImporterInteractive extends InteractiveCommand implements Initializable {
+
     @Parameter(required = false)
     OperettaManager.Builder opmBuilder;
     OperettaManager opm;
@@ -191,12 +193,15 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
                     .setRangeT(this.selected_timepoints_str)
                     .build();
 
+            double correctionFactor = Prefs.get(OperettaImporterHiddenSettings.correction_factor, 0.995);
+
             opm = opmBuilder
                     .setRange(range)
                     .flipHorizontal(flipMode.flipH)
                     .flipVertical(flipMode.flipV)
                     .setProjectionMethod(this.z_projection_method)
                     .setNormalization(norm_min, norm_max)
+                    .coordinatesCorrectionFactor(correctionFactor)
                     .build();
 
             List<String> selected_wells = opm.getAvailableWellsString();
@@ -347,12 +352,14 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
                 .setRangeT(this.selected_timepoints_str)
                 .build();
 
+        double correctionFactor = Prefs.get(OperettaImporterHiddenSettings.correction_factor, 0.995);
+
         opm = opmBuilder
                 .setRange(range)
                 .setProjectionMethod(this.z_projection_method)
                 .setSaveFolder(this.save_directory)
                 .setNormalization(norm_min, norm_max)
-
+                .coordinatesCorrectionFactor(correctionFactor)
                 .build();
 
         // Get Wells and Fields

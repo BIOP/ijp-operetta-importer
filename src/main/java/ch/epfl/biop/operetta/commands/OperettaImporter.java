@@ -40,7 +40,7 @@ import java.io.IOException;
  * Because the initial parsing can take a while, it is better for the user to have an estimation
  * of the time it will take to open the Operetta dataset, before launching the interactive command
  */
-@Plugin(type = Command.class, menuPath = "Plugins>BIOP > Operetta Importer...")
+@Plugin(type = Command.class, menuPath = "Plugins>BIOP > Operetta Importer > Operetta Importer...")
 public class OperettaImporter implements Command {
 
     // Useful to display the label of the folder parameter
