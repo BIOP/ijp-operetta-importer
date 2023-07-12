@@ -686,6 +686,12 @@ public class OperettaManager {
         Point topleft = getTopLeftCoordinates(fields);
         Point bottomright = getBottomRightCoordinates(fields);
 
+        // If we can't find the coordinates, we have no way of knowing the size of the final image
+        if (topleft == null || bottomright == null) {
+            log.error("Could not find coordinates for well " + well);
+            return null;
+        }
+
         long well_width = bottomright.getLongPosition(0) - topleft.getLongPosition(0) + sample_width;
         long well_height = bottomright.getLongPosition(1) - topleft.getLongPosition(1) + sample_height;
 
@@ -1191,14 +1197,17 @@ public class OperettaManager {
             return null;
         }
 
-        WellSample minx = fields.stream().min(Comparator.comparing(WellSample::getPositionX)).get();
-        WellSample miny = fields.stream().min(Comparator.comparing(WellSample::getPositionY)).get();
+        Optional<WellSample> minx = fields.stream().min(Comparator.comparing(WellSample::getPositionX));
+        Optional<WellSample> miny = fields.stream().min(Comparator.comparing(WellSample::getPositionY));
 
-        Long px = getUncalibratedPositionX(minx);
-        Long py = getUncalibratedPositionY(miny);
+        if (!minx.isPresent() || !miny.isPresent()) {
+            log.info("Could not find top left coordinates for fields");
+            return null;
+        }
+
+        Long px = getUncalibratedPositionX(minx.get());
+        Long py = getUncalibratedPositionY(miny.get());
         Point p = new Point(px, py);
-        //IJ.log("Top Left Point: " + p);
-
         return p;
     }
 
@@ -1214,11 +1223,16 @@ public class OperettaManager {
                 .filter(sample -> sample.getPositionX().value() != null)
                 .collect(Collectors.toList());
 
-        WellSample minx = fields.stream().min(Comparator.comparing(WellSample::getPositionX)).get();
-        WellSample miny = fields.stream().min(Comparator.comparing(WellSample::getPositionY)).get();
+        Optional<WellSample> minx = fields.stream().min(Comparator.comparing(WellSample::getPositionX));
+        Optional<WellSample> miny = fields.stream().min(Comparator.comparing(WellSample::getPositionY));
 
-        Long px = minx.getPositionX().value(UNITS.MICROMETER).longValue();
-        Long py = miny.getPositionY().value(UNITS.MICROMETER).longValue();
+        if (!minx.isPresent() || !miny.isPresent()) {
+            log.info("Could not find top left coordinates for fields");
+            return new Point(0,0);
+        }
+
+        Long px = minx.get().getPositionX().value(UNITS.MICROMETER).longValue();
+        Long py = miny.get().getPositionY().value(UNITS.MICROMETER).longValue();
         Point p = new Point(px, py);
 
         return p;
@@ -1235,20 +1249,25 @@ public class OperettaManager {
         fields = fields.stream().filter(sample -> sample.getPositionY() != null).collect(Collectors.toList());
 
         if (fields.size() != 0) {
-            WellSample maxx = fields.stream().max(Comparator.comparing(WellSample::getPositionX)).get();
-            WellSample maxy = fields.stream().max(Comparator.comparing(WellSample::getPositionY)).get();
+            Optional<WellSample> maxx = fields.stream().max(Comparator.comparing(WellSample::getPositionX));
+            Optional<WellSample> maxy = fields.stream().max(Comparator.comparing(WellSample::getPositionY));
 
-            Long px = getUncalibratedPositionX(maxx);
-            Long py = getUncalibratedPositionY(maxy);
+            if (!maxx.isPresent() || !maxy.isPresent()) {
+                log.info("Could not find top left coordinates for fields");
+                return null;
+            }
+
+            Long px = getUncalibratedPositionX(maxx.get());
+            Long py = getUncalibratedPositionY(maxy.get());
 
             if (px != null && py != null) {
                 return new Point(px, py);
             } else {
-                return new Point(0, 0);
+                return null;
             }
         } else {
             System.err.println("All fields are uncalibrated!");
-            return new Point(0, 0);
+            return null;
         }
     }
 

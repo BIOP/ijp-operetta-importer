@@ -94,8 +94,9 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     @Parameter(label = "Preview well slice", callback = "previewWell", required = false, persist = false)
     private Button openSlice;
 
-    @Parameter(label = "Flip images", callback = "updateMessage", choices={"None", "Flip horizontal", "Flip vertical", "Flip both"}, required = false)
-    private String flip_mode;
+    @Parameter(label = "Flip images", callback = "updateMessage", required = false)
+    private FLIP_MODE flipMode = FLIP_MODE.NONE;
+
 
     @Parameter(label = "Select ranges", callback = "updateMessage", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String range = "You can use commas or colons to separate ranges. eg. '1:10' or '1,3,5,8' ";
@@ -183,11 +184,6 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     private void updateMessage() {
         try {
 
-            // Choose flip mode
-            FLIP_MODE flip = FLIP_MODE.NONE;
-            for ( FLIP_MODE f : FLIP_MODE.values() ) {
-                if (f.getName().equals(this.flip_mode)){ flip = f; }
-            }
 
             HyperRange range = new HyperRange.Builder()
                     .setRangeC(this.selected_channels_str)
@@ -197,10 +193,9 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
             opm = opmBuilder
                     .setRange(range)
-                    .flipHorizontal(flip.flipH)
-                    .flipVertical(flip.flipV)
+                    .flipHorizontal(flipMode.flipH)
+                    .flipVertical(flipMode.flipV)
                     .setProjectionMethod(this.z_projection_method)
-                    .setSaveFolder(this.save_directory)
                     .setNormalization(norm_min, norm_max)
                     .build();
 
