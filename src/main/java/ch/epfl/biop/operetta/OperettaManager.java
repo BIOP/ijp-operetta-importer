@@ -818,7 +818,7 @@ public class OperettaManager {
                 }
             } else {
                 // Need to give all the fields, otherwise we will get the origin wrong
-                ImagePlus well_image = getWellImage(well, well.copyWellSampleList(), downscale, this.range, region);
+                ImagePlus well_image = getWellImage(well, well_fields, downscale, this.range, region);
                 String name = getFinalWellImageName(well);
                 if (well_image != null) {
                     IJ.saveAsTiff(well_image, new File(save_folder, name + ".tif").getAbsolutePath());
