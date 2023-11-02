@@ -1,1 +1,0 @@
-packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"ch.epfl.biop.operetta"},{"l":"ch.epfl.biop.operetta.commands"},{"l":"ch.epfl.biop.operetta.commands.utils"},{"l":"ch.epfl.biop.operetta.utils"}];updateSearchResults();

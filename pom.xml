@@ -5,13 +5,13 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>34.1.0</version>
+		<version>36.0.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>ch.epfl.biop</groupId>
 	<artifactId>Operetta_Importer</artifactId>
-	<version>0.2.7-SNAPSHOT</version>
+	<version>0.3.1-SNAPSHOT</version>
 
 	<name>PerkinElmer Operetta Importer</name>
 	<description>Hold your horses</description>
@@ -146,21 +146,6 @@
 			<artifactId>groovy</artifactId>
 		</dependency>
 	</dependencies>
-
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>3.5.0</version>
-				<configuration>
-					<outputDirectory>${project.basedir}</outputDirectory>
-					<reportOutputDirectory>${project.basedir}</reportOutputDirectory>
-					<destDir>docs</destDir>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
 
 
 </project>
