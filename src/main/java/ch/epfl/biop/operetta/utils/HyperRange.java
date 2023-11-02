@@ -165,7 +165,7 @@ public class HyperRange {
         }).collect(Collectors.toList());
 
         this.range_t = range_t.stream().filter(t -> {
-            boolean inside = (t >= 1 && t <= ts);
+            boolean inside = (t >= 0 && t <= ts);
             if (!inside) logger.info("Removed timepoint {} because it is not in range of data 1-{}.", t, ts);
             return inside;
         }).collect(Collectors.toList());
@@ -253,7 +253,7 @@ public class HyperRange {
             int z = meta.getPixelsSizeZ(0).getValue();
             int t = meta.getPixelsSizeT(0).getValue();
 
-            return setRangeC("1:" + c).setRangeZ("1:" + z).setRangeT("1:" + t);
+            return setRangeC("1:" + c).setRangeZ("1:" + z).setRangeT("0:" + (t-1));
         }
 
 
