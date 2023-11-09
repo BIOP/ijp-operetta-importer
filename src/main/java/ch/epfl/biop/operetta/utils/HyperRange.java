@@ -33,6 +33,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * Class to handle hyperstacks, and store valid ranges as well as reading ranges from metadata
+ */
 public class HyperRange {
 
     private static final Logger logger = LoggerFactory.getLogger(HyperRange.class);
@@ -42,6 +45,12 @@ public class HyperRange {
     private List<Integer> range_t;
     private ImagePlus imp;
 
+    /**
+     * Constructor used internally
+     * @param range_c List of valid channels
+     * @param range_z List of valid Z slices
+     * @param range_t List of valid time points
+     */
     HyperRange(List<Integer> range_c, List<Integer> range_z, List<Integer> range_t) {
 
         this.range_c = range_c;
@@ -52,6 +61,12 @@ public class HyperRange {
 
     }
 
+    /**
+     * Parses a string to get a list of valid channels
+     * @param s the string to parse e.g. "1,3,5-7" to [1,3,5,6,7]
+     * @return a list of channels
+     * @throws NumberFormatException if the string cannot be parsed
+     */
     public static List<Integer> parseString(String s) throws NumberFormatException {
         // first split by commas
         List<Integer> range = new ArrayList<>();
@@ -72,34 +87,58 @@ public class HyperRange {
         return range;
     }
 
+    /**
+     * Needed to make sure that we can get the 1D position of the image we want.
+     * For that we cheat and use an imageplus to access its getStackIndex method
+     */
     private void updateImagePlusPositions() {
         ImageStack s = ImageStack.create(1, 1, getTotalPlanes(), 8);
         this.imp = new ImagePlus("", s);
         this.imp.setDimensions(range_c.size(), range_z.size(), range_t.size());
     }
 
+    /**
+     * In case the range is modified, we need to update not just the range but also the imageplus for the getStackIndex method
+     * @param new_range the new range as a string
+     */
     public void updateCRange(String new_range) {
         this.range_c = parseString(new_range);
         updateImagePlusPositions();
 
     }
 
+    /**
+     * In case the range is modified, we need to update not just the range but also the imageplus for the getStackIndex method
+     * @param new_range the new range as a string
+     */
     public void updateZRange(String new_range) {
         this.range_z = parseString(new_range);
         updateImagePlusPositions();
 
     }
-
+/**
+     * In case the range is modified, we need to update not just the range but also the imageplus for the getStackIndex method
+ * @param new_range the new range as a string
+     */
     public void updateTRange(String new_range) {
         this.range_t = parseString(new_range);
         updateImagePlusPositions();
 
     }
 
+    /**
+     * Get the total number of planes we need
+     * @return the total number of planes
+     */
     public int getTotalPlanes() {
         return this.range_c.size() * this.range_t.size() * this.range_z.size();
     }
 
+    /**
+     * check if the given image name is included in the range
+     * @param s the image name
+     * @return true if the image name is included in the range
+     */
     public boolean includes(String s) {
         Matcher m = czt_pattern.matcher(s);
 
@@ -114,6 +153,11 @@ public class HyperRange {
         return false;
     }
 
+    /**
+     * Get the indexes matching the given image name as a map of "C", "Z", "T" and "I"
+     * @param s the image name
+     * @return "C", "Z", "T" and "I" indexes
+     */
     public Map<String, Integer> getIndexes(String s) {
 
         Map<String, Integer> indexes = new HashMap<>();
@@ -142,11 +186,20 @@ public class HyperRange {
 
     }
 
+    /**
+     * Get dimensions as a CZT range in the form of an int array
+     * @return int array of size 3 with C,Z,T dimensions
+     */
     public int[] getCZTDimensions() {
         return new int[]{this.range_c.size(), this.range_z.size(), this.range_t.size()};
 
     }
 
+    /**
+     * Check if the range is valid for the metadata provided
+     * @param metadata OME metadata to test
+     * @return a HyperRange with valid ranges
+     */
     public HyperRange confirmRange(IMetadata metadata) {
         int cs = metadata.getPixelsSizeC(0).getValue();
         int zs = metadata.getPixelsSizeZ(0).getValue();
@@ -174,30 +227,50 @@ public class HyperRange {
         return this;
     }
 
+    /**
+     * Get the range of channels
+     * @return List of channels selected
+     */
     public List<Integer> getRangeC() {
         return this.range_c;
     }
 
+    /**
+     * Set the range of channels
+     * @param range_c List of channels selected
+     */
     public void setRangeC(List<Integer> range_c) {
         this.range_c = range_c;
         updateImagePlusPositions();
 
     }
-
+/**
+     * Get the range of slices
+     * @return List of slices selected
+     */
     public List<Integer> getRangeZ() {
         return this.range_z;
     }
-
+/**
+     * Set the range of slices
+     * @param range_z List of slices selected
+     */
     public void setRangeZ(List<Integer> range_z) {
         this.range_z = range_z;
         updateImagePlusPositions();
 
     }
-
+/**
+     * Get the range of timepoints
+     * @return List of timepoints selected
+     */
     public List<Integer> getRangeT() {
         return this.range_t;
     }
-
+/**
+     * Set the range of timepoints
+     * @param range_t List of timepoints selected
+     */
     public void setRangeT(List<Integer> range_t) {
         this.range_t = range_t;
         updateImagePlusPositions();
@@ -209,45 +282,85 @@ public class HyperRange {
         return String.format("Range :\n\t\tC: %s\n\t\tZ: %s\n\t\tT: %s", range_c.toString(), range_z.toString(), range_t.toString());
     }
 
-
+    /**
+     * Builder class for HyperRange that works with strings and numbers
+     */
     public static class Builder {
         private List<Integer> range_c;
         private List<Integer> range_z;
         private List<Integer> range_t;
 
+        /**
+         * Set Channel Range using a string
+         * @param range_str the range string e.g. "1,2,4-8" for range [1,2,4,5,6,7,8]
+         * @return the builder
+         */
         public Builder setRangeC(String range_str) {
             if (range_str != null)
                 this.range_c = parseString(range_str);
             return this;
         }
 
+        /**
+         * Set Channel range between a start and end value (inclusive)
+         * @param start start channel (1 based)
+         * @param end end channel (1 based)
+         * @return the builder
+         */
         public Builder setRangeC(int start, int end) {
             this.range_c = IntStream.rangeClosed(start, end).boxed().collect(Collectors.toList());
             return this;
         }
 
+        /**
+         * Set Slice Range using a string
+         * @param range_str the range string e.g. "1,2,4-8" for range [1,2,4,5,6,7,8]
+         * @return the builder
+         */
         public Builder setRangeZ(String range_str) {
             if (range_str != null)
                 this.range_z = parseString(range_str);
             return this;
         }
 
+        /**
+         * Set Slice range between a start and end value (inclusive)
+         * @param start start Z slice (1 based)
+         * @param end end Z slice (1 based)
+         * @return the builder
+         */
         public Builder setRangeZ(int start, int end) {
             this.range_z = IntStream.rangeClosed(start, end).boxed().collect(Collectors.toList());
             return this;
         }
 
+        /**
+         * Set Time Range using a string
+         * @param range_str the range string e.g. "1,2,4-8" for range [1,2,4,5,6,7,8]
+         * @return the builder
+         */
         public Builder setRangeT(String range_str) {
             if (range_str != null)
                 this.range_t = parseString(range_str);
             return this;
         }
 
+        /**
+         * Set Timepoint range between a start and end value (inclusive)
+         * @param start start time (1 based)
+         * @param end end time (1 based)
+         * @return the builder
+         */
         public Builder setRangeT(int start, int end) {
             this.range_t = IntStream.rangeClosed(start, end).boxed().collect(Collectors.toList());
             return this;
         }
 
+        /**
+         * Use the image's metadata to build the range of the image
+         * @param meta the image's metadata
+         * @return the builder
+         */
         public Builder fromMetadata(IMetadata meta) {
             int c = meta.getPixelsSizeC(0).getValue();
             int z = meta.getPixelsSizeZ(0).getValue();
@@ -256,7 +369,10 @@ public class HyperRange {
             return setRangeC("1:" + c).setRangeZ("1:" + z).setRangeT("1:" + t);
         }
 
-
+        /**
+         * Build the HyperRange using the defined range lists
+         * @return the HyperRange
+         */
         public HyperRange build() {
             return new HyperRange(range_c, range_z, range_t);
         }

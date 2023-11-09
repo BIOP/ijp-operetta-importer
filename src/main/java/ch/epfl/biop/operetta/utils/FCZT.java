@@ -22,14 +22,23 @@
 package ch.epfl.biop.operetta.utils;
 
 import java.util.Objects;
-
+/**
+ * Wrapper class to handle Fields, Channels, Z slices and Time points
+ * Needed to produce a unique key for a given image
+ */
 public class FCZT {
     int f;
     int c;
     int z;
     int t;
 
-
+    /**
+     * Constructor
+     * @param f Number of fields
+     * @param c Number of channels
+     * @param z Number of Z slices
+     * @param t Number of time points
+     */
     public FCZT(int f, int c, int z, int t) {
         this.f = f;
         this.c = c;

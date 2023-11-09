@@ -31,8 +31,15 @@ import ome.xml.meta.OMEXMLMetadataRoot;
 
 import java.time.Instant;
 
+/**
+ * Test class for Operetta related bugs
+ */
 public class TestBugOperetta {
-
+    /**
+     * Test to check if the parsing of the Operetta XML is correct
+     * @param args Not used
+     * @throws Exception If something goes wrong in the OME XML parsing
+     */
     public static void main(String... args) throws Exception {
         String operettaDatasetPath = "Z:\\public\\radiana.ferrero_UPDEPLA\\BUG_operetta_importer\\Images\\Index.idx.xml";
         //String operettaDatasetPath = "Z:\\temp-Nico\\20211006\\RPE1_mScarletCep63_GFPCep135_CollagenMatek35mmBin2_7hpostCent__2021-10-05T19_11_56-Measurement 2\\Images\\Index.idx.xml";

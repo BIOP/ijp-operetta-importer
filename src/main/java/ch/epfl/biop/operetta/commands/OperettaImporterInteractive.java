@@ -27,7 +27,6 @@ import ch.epfl.biop.operetta.utils.HyperRange;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.Prefs;
-import ij.gui.Roi;
 import net.imagej.ImageJ;
 import ome.xml.model.Well;
 import ome.xml.model.WellSample;
@@ -49,6 +48,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * Interactive command to import Operetta data with a gui
+ */
 @SuppressWarnings("FieldMayBeFinal")
 @Plugin(type = Command.class)
 public class OperettaImporterInteractive extends InteractiveCommand implements Initializable {
@@ -345,6 +347,9 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         }
     }
 
+    /**
+     * Run the processing after pressing on the "Process" button
+     */
     public void doProcess() {
         HyperRange range = new HyperRange.Builder()
                 .setRangeC(this.selected_channels_str)
@@ -391,6 +396,11 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
     }
 
+    /**
+     * Test the plugin
+     * @param args ignored
+     * @throws Exception if something goes wrong
+     */
     public static void main(final String... args) throws Exception {
 
         // create the ImageJ application context with all available services

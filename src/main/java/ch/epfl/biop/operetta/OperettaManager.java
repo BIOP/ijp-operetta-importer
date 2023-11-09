@@ -481,15 +481,34 @@ public class OperettaManager {
     public ImagePlus getFieldImage(WellSample field) {
         return makeImagePlus(readSingleStack(field, 1, this.range, null), Collections.singletonList(field), null, getFinalFieldImageName(field));
     }
-
+    /**
+     * Exports the current field as an ImagePlus
+     * @param field the Field to export, get is through the {@link OperettaManager#getAvailableFields(Well)}
+     * @param downscale the downscale factor
+     * @return a calibrated ImagePlus
+     */
     public ImagePlus getFieldImage(WellSample field, int downscale) {
         return makeImagePlus(readSingleStack(field, downscale, this.range, null), Collections.singletonList(field), null, getFinalFieldImageName(field));
     }
-
+    /**
+     * Exports the current field as an ImagePlus
+     * @param field the Field to export, get is through the {@link OperettaManager#getAvailableFields(Well)}
+     * @param downscale the downscale factor
+     * @param subregion a arbitrary square ROI to extract from the provided fields
+     * @return a calibrated ImagePlus
+     */
     public ImagePlus getFieldImage(WellSample field, int downscale, Roi subregion) {
         return makeImagePlus(readSingleStack(field, downscale, this.range, subregion), Collections.singletonList(field), null, getFinalFieldImageName(field));
     }
 
+    /**
+     * Exports the current field as an ImagePlus
+     * @param field the Field to export, get is through the {@link OperettaManager#getAvailableFields(Well)}
+     * @param downscale the downscale factor
+     * @param range the C Z T range to extract, as a {@link HyperRange}
+     * @param subregion a arbitrary square ROI to extract from the provided fields
+     * @return a calibrated ImagePlus
+     */
     public ImagePlus getFieldImage(WellSample field, int downscale, HyperRange range, Roi subregion) {
 
         return makeImagePlus(readSingleStack(field, downscale, range, subregion), Collections.singletonList(field), range, getFinalFieldImageName(field));
@@ -1470,6 +1489,12 @@ public class OperettaManager {
             return this;
         }
 
+        /**
+         * Add the possibility to overwrite the coordinates correction factor in the builder
+         * And not affect the stored value in the {@link ch.epfl.biop.operetta.commands.OperettaImporterHiddenSettings} class
+         * @param correction_factor the correction factor (Keep it close to 1)
+         * @return a Builder object, to continue building parameters
+         */
         public Builder coordinatesCorrectionFactor(double correction_factor) {
             this.correction_factor = correction_factor;
             return this;

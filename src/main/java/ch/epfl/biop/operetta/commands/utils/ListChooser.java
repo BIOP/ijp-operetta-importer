@@ -35,11 +35,22 @@ import java.util.List;
 import java.util.Vector;
 import java.util.stream.Collectors;
 
+/**
+ * Very simple class to create a list chooser in ordetr to choose Wells or Fields for the Interactive command.
+ * Used internally by the Interactive command
+ */
 public class ListChooser {
 
     private static final Logger logger = LoggerFactory.getLogger(ListChooser.class);
 
-    static public void create(final String thing_name, final List<String> things, final List<String> selected_things) {
+
+    /**
+     * Creates a list chooser with a GUI
+     * @param thing_name Name of the thing to choose would be wells or fields
+     * @param things List of things to choose from Wells or Fields
+     * @param selected_things what was selected after running the chooser
+     */
+    public static void create(final String thing_name, final List<String> things, final List<String> selected_things) {
         final JPanel dialogPanel = new JPanel();
 
         final BoxLayout col1Layout = new BoxLayout(dialogPanel, BoxLayout.PAGE_AXIS);
@@ -72,7 +83,11 @@ public class ListChooser {
         }
     }
 
-    static public void createPlate(List<Well> wells) {
+    /**
+     * Creates a plate chooser with a GUI. Not used for now.
+     * @param wells List of wells
+     */
+    static protected void createPlate(List<Well> wells) {
 
         int nrows = (int) wells.stream().map(w -> w.getRow().getValue()).distinct().count();
         int ncols = (int) wells.stream().map(w -> w.getColumn().getValue()).distinct().count();
@@ -122,6 +137,10 @@ public class ListChooser {
 
     }
 
+    /**
+     * Test class for debugging
+     * @param args Not used
+     */
     public static void main(String[] args) {
 
         File id = new File("X:\\Tiling\\Opertta Tiling Magda\\Images\\Index.idx.xml");

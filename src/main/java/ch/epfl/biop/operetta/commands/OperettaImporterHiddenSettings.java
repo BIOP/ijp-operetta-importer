@@ -27,14 +27,27 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
+/**
+ * Settings for the Operetta Importer
+ * This factor slightly shrinks the coordinates of the images to ensure that they overlap ever so slightly.
+ * The default value was tested for our Operetta and seems to work for most people
+ * But it was requested to have it as a parameter.
+ */
 @SuppressWarnings("FieldMayBeFinal")
 @Plugin(type = Command.class, menuPath = "Plugins>BIOP > Operetta Importer > Operetta Importer Settings...")
 public class OperettaImporterHiddenSettings implements Command{
+    /**
+     * Correction factor key for storage in ImageJ prefs
+     */
     protected static final String correction_factor = "ch.epfl.biop.operetta.correctionFactor";
 
+    // Parameter for generating a GUI
     @Parameter(label = "XY coordinates correction factor (default is 0.995)", persist = false)
     Double correctionFactor = Prefs.get(correction_factor, 0.995);
 
+    /**
+     * All this class does is set the correction factor in the IJ prefs so we can use it.
+     */
     @Override
     public void run() {
         Prefs.set(correction_factor, correctionFactor);
