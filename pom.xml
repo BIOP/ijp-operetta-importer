@@ -5,13 +5,13 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>37.0.0</version>
+		<version>36.0.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>ch.epfl.biop</groupId>
 	<artifactId>Operetta_Importer</artifactId>
-	<version>0.3.1-SNAPSHOT</version>
+	<version>0.3.1</version>
 
 	<name>PerkinElmer Operetta Importer</name>
 	<description>Hold your horses</description>
@@ -92,7 +92,7 @@
 		<connection>scm:git:https://github.com/BIOP/ijp-operetta-importer</connection>
 		<developerConnection>scm:git:git@github.com:BIOP/ijp-operetta-importer</developerConnection>
 		<url>https://github.com/BIOP/ijp-operetta-importer.git</url>
-     <tag>HEAD</tag>
+     <tag>Operetta_Importer-0.3.1</tag>
   </scm>
 
 	<ciManagement>
