@@ -40,6 +40,15 @@ public class HyperRange {
 
     private static final Logger logger = LoggerFactory.getLogger(HyperRange.class);
     private final Pattern czt_pattern = Pattern.compile(".*p(\\d*)-ch(\\d*)sk(\\d*)fk(\\d*).*");
+    //int c = Integer.parseInt(m.group(2));
+    //int z = Integer.parseInt(m.group(1));
+    //int t = Integer.parseInt(m.group(3));
+
+    private final Pattern czt_pattern_archive = Pattern.compile(".*f(\\d*)p(\\d*)-ch(\\d*)t(\\d*).*");
+    //int c = Integer.parseInt(m.group(3));
+    //int z = Integer.parseInt(m.group(2));
+    //int t = Integer.parseInt(m.group(4));
+
     private List<Integer> range_c;
     private List<Integer> range_z;
     private List<Integer> range_t;
@@ -148,6 +157,15 @@ public class HyperRange {
             int t = Integer.parseInt(m.group(3));
 
             return range_c.contains(c) && range_z.contains(z) && range_t.contains(t);
+        } else {
+            m = czt_pattern_archive.matcher(s);
+            if (m.find()) {
+                int c = Integer.parseInt(m.group(3));
+                int z = Integer.parseInt(m.group(2));
+                int t = Integer.parseInt(m.group(4));
+
+                return range_c.contains(c) && range_z.contains(z) && range_t.contains(t);
+            }
         }
 
         return false;
@@ -180,6 +198,24 @@ public class HyperRange {
             int idx = imp.getStackIndex(range_c.indexOf(c) + 1, range_z.indexOf(z) + 1, range_t.indexOf(t) + 1);
             indexes.put("I", idx);
 
+        } else {
+            m = czt_pattern_archive.matcher(s);
+            if (m.find()) {
+                int c = Integer.parseInt(m.group(3));
+                indexes.put("C", c);
+
+                int z = Integer.parseInt(m.group(2));
+                indexes.put("Z", z);
+
+                int t = Integer.parseInt(m.group(4));
+                indexes.put("T", t);
+
+                // This is assuming we want an index that is continuous and starting from 1 but what if that's not the case?
+                //int idx = imp.getStackIndex(c, z, t);//int idx = imp.getStackIndex(c, z, t);
+
+                int idx = imp.getStackIndex(range_c.indexOf(c) + 1, range_z.indexOf(z) + 1, range_t.indexOf(t) + 1);
+                indexes.put("I", idx);
+            }
         }
 
         return indexes;
