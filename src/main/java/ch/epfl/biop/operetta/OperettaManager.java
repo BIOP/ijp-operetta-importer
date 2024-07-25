@@ -41,6 +41,8 @@ import ome.xml.meta.OMEXMLMetadataRoot;
 import ome.xml.model.Well;
 import ome.xml.model.WellSample;
 import org.perf4j.StopWatch;
+import org.scijava.task.Task;
+import org.scijava.task.TaskService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,6 +93,8 @@ public class OperettaManager {
     private final boolean flip_horizontal;
     private final boolean flip_vertical;
 
+    private final TaskService taskService; // Task monitoring and cancellation
+
     /**
      * OperettaManager Constructor. This constructor is private as you need to use the Builder class
      * to generate the OperettaManager instance. {@link Builder}
@@ -113,7 +117,8 @@ public class OperettaManager {
                             boolean is_projection,
                             int projection_type,
                             File save_folder,
-                            double correction_factor) {
+                            double correction_factor,
+                            TaskService taskService) {
 
         this.id = new File(reader.getCurrentFile());
         this.main_reader = reader;
@@ -130,6 +135,7 @@ public class OperettaManager {
         this.correction_factor = correction_factor;
 
         this.px_size = metadata.getPixelsPhysicalSizeX(0);
+        this.taskService = taskService;
 
     }
 
@@ -798,61 +804,106 @@ public class OperettaManager {
 
         Instant global_start = Instant.now();
 
-        double percentageCompleteness;
-
-        for (Well well : wells) {
-            log.info("Well: {}", well);
-            IJ.log("- Well " + well.getID() + " (" + iWell + "/" + wells.size() + " )");//);
-            Instant well_start = Instant.now();
-
-            if (fields != null) {
-                well_fields = fields.stream().map(well::getWellSample).collect(Collectors.toList());
-            } else {
-                // Get the samples associates with the current well, by index
-                well_fields = well.copyWellSampleList();
-            }
-
-            if (is_fields_individual) {
-                if (region != null) {
-                    well_fields = getIntersectingFields(well_fields, region);
-                }
-
-                AtomicInteger iField = new AtomicInteger();
-                for (WellSample field : well_fields) {
-                    iField.incrementAndGet();
-                    IJ.log("\t - Field " + field.getID() + " (" + iField + "/" + well_fields.size() + ")");//);
-                    ImagePlus field_image = getFieldImage(field, downscale, this.range, null);
-                    String name = getFinalFieldImageName(field);
-                    if (field_image != null)
-                        IJ.saveAsTiff(field_image, new File(save_folder, name + ".tif").getAbsolutePath());
-                    percentageCompleteness = (iWell.get() / (double) wells.size() + iField.get() / (double) (well_fields.size() * wells.size())) * 100;
-                    printTimingMessage(global_start, percentageCompleteness);
-                }
-                // Save the positions file
-                // Get the positions that were used, just compute them again
-                try {
-                    writeWellPositionsFile(well_fields, new File(save_folder, getFinalWellImageName(well) + ".txt"), downscale);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                // Need to give all the fields, otherwise we will get the origin wrong
-                ImagePlus well_image = getWellImage(well, well_fields, downscale, this.range, region);
-                String name = getFinalWellImageName(well);
-                if (well_image != null) {
-                    IJ.saveAsTiff(well_image, new File(save_folder, name + ".tif").getAbsolutePath());
-                }
-            }
-            Instant ends = Instant.now();
-            IJ.log(" - Well processed in " + Duration.between(well_start, ends).getSeconds() + " s.");
-            iWell.incrementAndGet();
-            percentageCompleteness = (iWell.get() / (double) wells.size()) * 100;
-            printTimingMessage(global_start, percentageCompleteness);
+        Task taskWell = null;
+        Task taskField = null;
+        if (taskService!=null) {
+            taskWell = taskService.createTask("Export of "+wells.size()+" well(s)");
+            taskWell.setProgressMaximum(wells.size());
+            taskWell.start();
         }
 
-        Instant global_ends = Instant.now();
-        IJ.log(" DONE! All wells processed in " + (Duration.between(global_start, global_ends).getSeconds() / 60) + " min.");
+        double percentageCompleteness;
 
+        try {
+            for (Well well : wells) {
+                if (taskWell != null) {
+                    if (taskWell.isCanceled()) {
+                        IJ.log("The export task has been cancelled: "+taskWell.getCancelReason());
+                        return;
+                    }
+                    taskWell.setStatusMessage("- Well " + well.getID());
+                }
+                log.info("Well: {}", well);
+                IJ.log("- Well " + well.getID() + " (" + iWell + "/" + wells.size() + " )");//);
+                Instant well_start = Instant.now();
+
+                if (fields != null) {
+                    well_fields = fields.stream().map(well::getWellSample).collect(Collectors.toList());
+                } else {
+                    // Get the samples associates with the current well, by index
+                    well_fields = well.copyWellSampleList();
+                }
+
+                if (is_fields_individual) {
+                    if (region != null) {
+                        well_fields = getIntersectingFields(well_fields, region);
+                    }
+
+                    if (taskService!=null) {
+                        taskField = taskService.createTask("Export "+well_fields.size()+" Fields");
+                        taskField.start();
+                        taskField.setProgressMaximum(well_fields.size());
+                    }
+                    AtomicInteger iField = new AtomicInteger();
+                    try {
+                        for (WellSample field : well_fields) {
+                            if (taskField!=null) {
+                                if (taskField.isCanceled()) {
+                                    assert taskWell!=null;
+                                    taskWell.cancel("Downstream task cancelled.");
+                                    break;
+                                }
+                                taskField.setStatusMessage("- " + field.getID());
+                            }
+                            iField.incrementAndGet();
+                            IJ.log("\t - Field " + field.getID() + " (" + iField + "/" + well_fields.size() + ")");//);
+                            ImagePlus field_image = getFieldImage(field, downscale, this.range, null);
+                            String name = getFinalFieldImageName(field);
+                            if (field_image != null)
+                                IJ.saveAsTiff(field_image, new File(save_folder, name + ".tif").getAbsolutePath());
+                            percentageCompleteness = (iWell.get() / (double) wells.size() + iField.get() / (double) (well_fields.size() * wells.size())) * 100;
+                            printTimingMessage(global_start, percentageCompleteness);
+                            if (taskField!=null) taskField.setProgressValue(iField.get());
+                        }
+                        // Save the positions file
+                        // Get the positions that were used, just compute them again
+                        try {
+                            writeWellPositionsFile(well_fields, new File(save_folder, getFinalWellImageName(well) + ".txt"), downscale);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                    } finally {
+                        if (taskField!=null) {
+                            taskField.finish();
+                        }
+                    }
+                } else {
+                    // Need to give all the fields, otherwise we will get the origin wrong
+                    ImagePlus well_image = getWellImage(well, well_fields, downscale, this.range, region);
+                    String name = getFinalWellImageName(well);
+                    if (well_image != null) {
+                        IJ.saveAsTiff(well_image, new File(save_folder, name + ".tif").getAbsolutePath());
+                    }
+                }
+                Instant ends = Instant.now();
+                IJ.log(" - Well processed in " + Duration.between(well_start, ends).getSeconds() + " s.");
+                iWell.incrementAndGet();
+                if (taskWell!=null) taskWell.setProgressValue(iWell.get());
+                percentageCompleteness = (iWell.get() / (double) wells.size()) * 100;
+                printTimingMessage(global_start, percentageCompleteness);
+            }
+
+            Instant global_ends = Instant.now();
+            IJ.log(" DONE! All wells processed in " + (Duration.between(global_start, global_ends).getSeconds() / 60) + " min.");
+        } finally {
+            if (taskWell!=null) {
+                taskWell.finish();
+            }
+            if (taskField!=null) {
+                taskField.finish();
+            }
+        }
     }
 
     /**
@@ -1379,6 +1430,8 @@ public class OperettaManager {
         private boolean flip_horizontal = false;
         private boolean flip_vertical = false;
 
+        private TaskService taskService = null;
+
         /**
          * Flip the individual tiles Horizontally.
          * This information is encoded by PerkinElmer in a transformation matrix
@@ -1501,6 +1554,15 @@ public class OperettaManager {
         }
 
         /**
+         * Optional: adds a way to monitor the progression of a process using scijava TaskService
+         * @param taskService a service that monitors the progression of a process
+         */
+        public Builder setTaskService(TaskService taskService) {
+            this.taskService = taskService;
+            return this;
+        }
+
+        /**
          * The build method handles creating an {@link OperettaManager} object from all the settings that were provided.
          * This is done so that everything, like the {@link HyperRange} that is defined is valid.
          *
@@ -1544,7 +1606,8 @@ public class OperettaManager {
                         this.is_projection,
                         this.projection_method,
                         this.save_folder,
-                        this.correction_factor);
+                        this.correction_factor,
+                        this.taskService);
 
             } catch (Exception e) {
                 log.error("Issue when creating reader for file {}", id);

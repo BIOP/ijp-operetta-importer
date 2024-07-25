@@ -36,6 +36,7 @@ import org.scijava.command.Command;
 import org.scijava.command.InteractiveCommand;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
+import org.scijava.task.TaskService;
 import org.scijava.widget.Button;
 import org.scijava.widget.FileWidget;
 
@@ -131,6 +132,9 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     @Parameter(label = "Process", callback = "doProcess", persist = false)
     Button process;
 
+    @Parameter
+    TaskService taskService;
+
     private String getMessage(long bytes_in, long bytes_out, String name, String oriSize, String exportSize) {
         DecimalFormat df = new DecimalFormat("#0.0");
 
@@ -204,6 +208,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
                     .setProjectionMethod(this.z_projection_method)
                     .setNormalization(norm_min, norm_max)
                     .coordinatesCorrectionFactor(correctionFactor)
+                    .setTaskService(taskService)
                     .build();
 
             List<String> selected_wells = opm.getAvailableWellsString();
