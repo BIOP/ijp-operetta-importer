@@ -127,7 +127,7 @@ public class OperettaImporter implements Command {
             OperettaManager.Builder opmBuilder = new OperettaManager.Builder()
                     .reader(reader[0]);
 
-            cs.run(OperettaImporterInteractive.class, true, "opmBuilder", opmBuilder);
+            cs.run(OperettaImporterInteractive.class, true, "opm_builder", opmBuilder);
         }
 
     }

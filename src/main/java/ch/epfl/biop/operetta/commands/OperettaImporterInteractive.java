@@ -52,12 +52,13 @@ import java.util.stream.Collectors;
 /**
  * Interactive command to import Operetta data with a gui
  */
-@SuppressWarnings("FieldMayBeFinal")
+@SuppressWarnings({"FieldMayBeFinal", "CanBeFinal"})
 @Plugin(type = Command.class)
 public class OperettaImporterInteractive extends InteractiveCommand implements Initializable {
 
     @Parameter(required = false)
-    OperettaManager.Builder opmBuilder;
+    OperettaManager.Builder opm_builder;
+
     OperettaManager opm;
     List<String> selected_wells_string = new ArrayList<>();
     List<String> selected_fields_string = new ArrayList<>();
@@ -89,18 +90,18 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     @Parameter(label = "Selected wells. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_wells_str = "";
     @Parameter(label = "Choose Wells", callback = "wellChooser", required = false, persist = false)
-    private Button chooseWells;
+    private Button choose_wells;
     @Parameter(label = "Selected fields. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_fields_str = "";
     @Parameter(label = "Choose fields", callback = "fieldChooser", required = false, persist = false)
-    private Button chooseFields;
+    private Button choose_fields;
     @Parameter(label = "Fuse fields", callback = "updateMessage", required = false)
     private boolean is_fuse_fields = true;
     @Parameter(label = "Preview well slice", callback = "previewWell", required = false, persist = false)
-    private Button openSlice;
+    private Button open_slice;
 
     @Parameter(label = "Flip images", callback = "updateMessage", required = false)
-    private FLIP_MODE flipMode = FLIP_MODE.NONE;
+    private FLIP_MODE flip_mode = FLIP_MODE.NONE;
 
 
     @Parameter(label = "Select ranges", callback = "updateMessage", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
@@ -124,10 +125,10 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     Integer norm_max = (int) Math.pow(2, 16) - 1;
 
     @Parameter(label = "Update Data Estimation", callback = "updateMessage", persist = false)
-    Button updateMessage;
+    Button update_message;
 
     @Parameter(visibility = ItemVisibility.MESSAGE, persist = false, style = "message")
-    String taskSummary = "Click on 'Update Data Estimation'";
+    String task_summary = "Click on 'Update Data Estimation'";
 
     @Parameter(label = "Process", callback = "doProcess", persist = false)
     Button process;
@@ -199,12 +200,12 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
                     .setRangeT(this.selected_timepoints_str)
                     .build();
 
-            double correctionFactor = Prefs.get(OperettaImporterHiddenSettings.correction_factor, 0.995);
+            double correctionFactor = Prefs.get(OperettaImporterHiddenSettings.correction_factor_key, 0.995);
 
-            opm = opmBuilder
+            opm = opm_builder
                     .setRange(range)
-                    .flipHorizontal(flipMode.flipH)
-                    .flipVertical(flipMode.flipV)
+                    .flipHorizontal(flip_mode.flipH)
+                    .flipVertical(flip_mode.flipV)
                     .setProjectionMethod(this.z_projection_method)
                     .setNormalization(norm_min, norm_max)
                     .coordinatesCorrectionFactor(correctionFactor)
@@ -217,11 +218,11 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
             int oriWellsNumber = selected_wells.size();
             int oriFieldsNumber = selected_fields.size();
 
-            if (!selected_wells_str.equals("")) {
+            if (!selected_wells_str.isEmpty()) {
                 selected_wells = stringToList(selected_wells_str);
             }
 
-            if (!selected_fields_str.equals("")) {
+            if (!selected_fields_str.isEmpty()) {
                 selected_fields = stringToList(selected_fields_str);
             }
 
@@ -241,17 +242,17 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
             String oriSize = "<strong>Original Size</strong>: W: " + oriWellsNumber + ", F:" + oriFieldsNumber + ", X:" + dimsIO[0] + ", Y:" + dimsIO[1] + ", Z:" + dimsIO[2] + ", C:" + dimsIO[3] + ", T:" + dimsIO[4];
             String exportSize = "<strong>Exported Size</strong>: W: " + selected_wells.size() + ", F:" + selected_fields.size() + ", X:" + dimsIO[5] + ", Y:" + dimsIO[6] + ", Z:" + dimsIO[7] + ", C:" + dimsIO[8] + ", T:" + dimsIO[9];
 
-            taskSummary = getMessage(bytes[0], bytes[1], opm.getPlateName(), oriSize, exportSize);
+            task_summary = getMessage(bytes[0], bytes[1], opm.getPlateName(), oriSize, exportSize);
 
         } catch (Exception e) {
-            taskSummary = "Error " + e.getMessage();
+            task_summary = "Error " + e.getMessage();
         }
 
     }
 
 
     private void wellChooser() {
-        opm = opmBuilder.build();
+        opm = opm_builder.build();
         ListChooser.create("Wells", opm.getAvailableWellsString(), selected_wells_string);
         selected_wells_str = selected_wells_string.toString();
         if (selected_wells_str.equals("[]")) selected_wells_str = "";
@@ -259,7 +260,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     }
 
     private void fieldChooser() {
-        opm = opmBuilder.build();
+        opm = opm_builder.build();
         ListChooser.create("Fields", opm.getAvailableFieldsString(), selected_fields_string);
         selected_fields_str = selected_fields_string.toString();
         if (selected_slices_str.equals("[]")) selected_fields_str = "";
@@ -269,27 +270,25 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     private List<String> stringToList(String str) {
         String[] split = str.replaceAll("\\[|\\]", "").split(",");
 
-        List<String> result = Arrays.asList(split).stream().collect(Collectors.toList());
-
-        return result;
+        return Arrays.stream(split).collect(Collectors.toList());
     }
 
     private void previewWell() {
 
-        opm = opmBuilder
+        opm = opm_builder
                 .setProjectionMethod(z_projection_method)
                 .build();
 
         // If there is a range, update it, otherwise choose the first timepoint and the first z
-        if (!this.selected_slices_str.equals("")) {
+        if (!this.selected_slices_str.isEmpty()) {
             opm.getRange().updateZRange(selected_slices_str);
-        } else if (this.selected_slices_str.equals("") && this.z_projection_method.equals("No Projection")) {
+        } else if (this.z_projection_method.equals("No Projection")) {
             opm.getRange().updateZRange("1:1");
         }
 
-        if (!this.selected_timepoints_str.equals("")) {
+        if (!this.selected_timepoints_str.isEmpty()) {
             opm.getRange().updateTRange(selected_timepoints_str);
-        } else if (this.selected_timepoints_str.equals("") && this.z_projection_method.equals("No Projection")) {
+        } else if (this.z_projection_method.equals("No Projection")) {
             opm.getRange().updateTRange("1:1");
         }
 
@@ -298,7 +297,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
 
         // Get the first well that is selected
-        if (selected_wells_str.length() != 0)
+        if (!selected_wells_str.isEmpty())
             selected_well = stringToList(selected_wells_str).get(0);
         else {
             selected_well = opm.getAvailableWellsString().get(0);
@@ -310,7 +309,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
 
         ImagePlus sample;
-        if (!is_fuse_fields && !selected_fields_str.equals("")) {
+        if (!is_fuse_fields && !selected_fields_str.isEmpty()) {
             WellSample field = opm.getField(well, getFields().get(0));
 
             sample = opm.getFieldImage(field, 8);
@@ -344,7 +343,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     }
 
     private List<Integer> getFields() {
-        if (selected_fields_string.size() != 0) {
+        if (!selected_fields_string.isEmpty()) {
             List<Integer> field_ids = selected_fields_string.stream().map(w -> Integer.parseInt(w.trim().split(" ")[1]) - 1).collect(Collectors.toList());
             return field_ids;
         } else {
@@ -362,9 +361,9 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
                 .setRangeT(this.selected_timepoints_str)
                 .build();
 
-        double correctionFactor = Prefs.get(OperettaImporterHiddenSettings.correction_factor, 0.995);
+        double correctionFactor = Prefs.get(OperettaImporterHiddenSettings.correction_factor_key, 0.995);
 
-        opm = opmBuilder
+        opm = opm_builder
                 .setRange(range)
                 .setProjectionMethod(this.z_projection_method)
                 .setSaveFolder(this.save_directory)
@@ -378,12 +377,12 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         List<String> selected_fields = opm.getAvailableFieldsString();
 
 
-        if (!selected_wells_str.equals("")) {
+        if (!selected_wells_str.isEmpty()) {
             selected_wells = stringToList(selected_wells_str);
         }
 
 
-        if (!selected_fields_str.equals("")) {
+        if (!selected_fields_str.isEmpty()) {
             selected_fields = stringToList(selected_fields_str);
         }
 

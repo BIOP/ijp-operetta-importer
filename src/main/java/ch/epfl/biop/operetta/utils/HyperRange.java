@@ -40,14 +40,8 @@ public class HyperRange {
 
     private static final Logger logger = LoggerFactory.getLogger(HyperRange.class);
     private final Pattern czt_pattern = Pattern.compile(".*p(\\d*)-ch(\\d*)sk(\\d*)fk(\\d*).*");
-    //int c = Integer.parseInt(m.group(2));
-    //int z = Integer.parseInt(m.group(1));
-    //int t = Integer.parseInt(m.group(3));
 
     private final Pattern czt_pattern_archive = Pattern.compile(".*f(\\d*)p(\\d*)-ch(\\d*)t(\\d*).*");
-    //int c = Integer.parseInt(m.group(3));
-    //int z = Integer.parseInt(m.group(2));
-    //int t = Integer.parseInt(m.group(4));
 
     private List<Integer> range_c;
     private List<Integer> range_z;
@@ -88,7 +82,7 @@ public class HyperRange {
                                 .boxed().collect(Collectors.toList());
                         range.addAll(subrange);
                     } else {
-                        if (sr2[0].length() > 0)
+                        if (!sr2[0].isEmpty())
                             range.add(Integer.valueOf(sr2[0].trim()));
                     }
                 }

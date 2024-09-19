@@ -500,7 +500,7 @@ public class OperettaManager {
      * Exports the current field as an ImagePlus
      * @param field the Field to export, get is through the {@link OperettaManager#getAvailableFields(Well)}
      * @param downscale the downscale factor
-     * @param subregion a arbitrary square ROI to extract from the provided fields
+     * @param subregion an arbitrary square ROI to extract from the provided fields
      * @return a calibrated ImagePlus
      */
     public ImagePlus getFieldImage(WellSample field, int downscale, Roi subregion) {
@@ -512,7 +512,7 @@ public class OperettaManager {
      * @param field the Field to export, get is through the {@link OperettaManager#getAvailableFields(Well)}
      * @param downscale the downscale factor
      * @param range the C Z T range to extract, as a {@link HyperRange}
-     * @param subregion a arbitrary square ROI to extract from the provided fields
+     * @param subregion an arbitrary square ROI to extract from the provided fields
      * @return a calibrated ImagePlus
      */
     public ImagePlus getFieldImage(WellSample field, int downscale, HyperRange range, Roi subregion) {
@@ -700,7 +700,7 @@ public class OperettaManager {
         final List<WellSample> adjusted_fields = getIntersectingFields(fields, bounds);
         // Problem with ROI bounds is that they are typically given relative to the fused image
 
-        if (adjusted_fields.size() == 0) return null;
+        if (adjusted_fields.isEmpty()) return null;
 
         int a_field_id = fields.get(0).getIndex().getValue();
         // We need to know the width and height of a single image
@@ -1238,6 +1238,7 @@ public class OperettaManager {
 
         if (pos == null) {
             log.error("Could not find position for field "+field);
+            throw new RuntimeException("Could not find position for field "+field);
         }
 
         // After this, pos is the absolute position of the current sample in pixels and that should be it
@@ -1262,7 +1263,7 @@ public class OperettaManager {
     public Point getTopLeftCoordinates(java.util.List<WellSample> fields) {
         fields = fields.stream().filter(sample -> sample.getPositionX() != null).collect(Collectors.toList());
 
-        if (fields.size() == 0) {
+        if (fields.isEmpty()) {
             System.err.println("Cannot find coordinates");
             return null;
         }
@@ -1318,7 +1319,7 @@ public class OperettaManager {
     public Point getBottomRightCoordinates(List<WellSample> fields) {
         fields = fields.stream().filter(sample -> sample.getPositionY() != null).collect(Collectors.toList());
 
-        if (fields.size() != 0) {
+        if (!fields.isEmpty()) {
             Optional<WellSample> maxx = fields.stream().max(Comparator.comparing(WellSample::getPositionX));
             Optional<WellSample> maxy = fields.stream().max(Comparator.comparing(WellSample::getPositionY));
 
@@ -1537,7 +1538,8 @@ public class OperettaManager {
          * @return a Builder object, to continue building parameters
          */
         public Builder setSaveFolder(File save_folder) {
-            save_folder.mkdirs();
+            boolean success = save_folder.mkdirs();
+            if (!success) throw new RuntimeException("Could not create output folder "+save_folder.getAbsolutePath());
             this.save_folder = save_folder;
             return this;
         }
@@ -1584,9 +1586,9 @@ public class OperettaManager {
                 } else {
                     if (this.range.getTotalPlanes() == 0) {
                         HyperRange new_range = new HyperRange.Builder().fromMetadata((IMetadata) reader.getMetadataStore()).build();
-                        if (this.range.getRangeC().size() != 0) new_range.setRangeC(this.range.getRangeC());
-                        if (this.range.getRangeZ().size() != 0) new_range.setRangeZ(this.range.getRangeZ());
-                        if (this.range.getRangeT().size() != 0) new_range.setRangeT(this.range.getRangeT());
+                        if (!this.range.getRangeC().isEmpty()) new_range.setRangeC(this.range.getRangeC());
+                        if (!this.range.getRangeZ().isEmpty()) new_range.setRangeZ(this.range.getRangeZ());
+                        if (!this.range.getRangeT().isEmpty()) new_range.setRangeT(this.range.getRangeT());
 
                         this.range = new_range;
                     }

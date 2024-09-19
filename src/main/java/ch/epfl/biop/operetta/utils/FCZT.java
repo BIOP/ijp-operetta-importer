@@ -27,10 +27,10 @@ import java.util.Objects;
  * Needed to produce a unique key for a given image
  */
 public class FCZT {
-    int f;
-    int c;
-    int z;
-    int t;
+    final int f;
+    final int c;
+    final int z;
+    final int t;
 
     /**
      * Constructor

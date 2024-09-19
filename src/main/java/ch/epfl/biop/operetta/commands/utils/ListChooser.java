@@ -36,7 +36,7 @@ import java.util.Vector;
 import java.util.stream.Collectors;
 
 /**
- * Very simple class to create a list chooser in ordetr to choose Wells or Fields for the Interactive command.
+ * Very simple class to create a list chooser in order to choose Wells or Fields for the Interactive command.
  * Used internally by the Interactive command
  */
 public class ListChooser {
