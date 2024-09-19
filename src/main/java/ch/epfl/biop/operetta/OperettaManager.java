@@ -1539,7 +1539,14 @@ public class OperettaManager {
          */
         public Builder setSaveFolder(File save_folder) {
             boolean success = save_folder.mkdirs();
-            if (!success) throw new RuntimeException("Could not create output folder "+save_folder.getAbsolutePath());
+            if (!success) {
+                if (!save_folder.exists()) {
+                    throw new RuntimeException("Could not create output folder "+save_folder.getAbsolutePath());
+                }
+                if (!save_folder.isDirectory()) {
+                    throw new RuntimeException("The destination path is not a folder ("+save_folder.getAbsolutePath()+")");
+                }
+            }
             this.save_folder = save_folder;
             return this;
         }
