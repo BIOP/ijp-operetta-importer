@@ -14,7 +14,7 @@ def opm = new OperettaManager.Builder()
 									.build();
 
 
-def allWells = opm.getAvailableWells()
+def allWells = opm.getWells()
 
 def xpos = [2700, 2700, 2700, 2700, 2700 ]
 def ypos = [300, 14500, 29500, 45000, 74000 ]
@@ -27,7 +27,7 @@ allWells.each { well ->
 
 	// Process Each ROI
 	ypos.eachWithIndex { y, i ->
-		def fields = opm.getAvailableFields(well)
+		def fields = opm.getFields(well)
 
 		def roi = new Roi( xpos[i], ypos[i], width_full, height_full )
 

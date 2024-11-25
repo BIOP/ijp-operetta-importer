@@ -21,6 +21,7 @@
  */
 package ch.epfl.biop.operetta;
 
+import ch.epfl.biop.operetta.commands.OperettaImporter;
 import ch.epfl.biop.operetta.utils.HyperRange;
 import ij.IJ;
 import ij.ImagePlus;
@@ -104,6 +105,33 @@ public class OperettaManager {
     private StitchingParameters stitching_parameters;
     private final Utilities utils;
     private final TaskService taskService; // Task monitoring and cancellation
+    private final boolean use_averaging;
+
+    /**
+     * List the types of valid XML files we should be looking for
+     */
+    private enum XMLFILE {
+        V5("Index.idx.xml", "PerkinElmer Harmony V5"),
+        V5FLEX("Index.flex.xml", "PerkinElmer Harmony V5 Flatfield data"),
+        V6("Index.xml", "PerkinElmer Harmony V6");
+
+        private final String description;
+        private final String indexFileName;
+
+        XMLFILE(String indexFileName, String description) {
+            this.indexFileName = indexFileName;
+            this.description = description;
+        }
+
+        private String getIndexFileName() {
+            return this.indexFileName;
+        }
+
+        public String getDescription() {
+            return this.description;
+        }
+
+    }
 
     /**
      * OperettaManager Constructor. This constructor is private as you need to use the Builder class
@@ -120,6 +148,7 @@ public class OperettaManager {
      */
     private OperettaManager(IFormatReader reader,
                             int downsample,
+                            boolean use_averaging,
                             HyperRange range,
                             double norm_min,
                             double norm_max,
@@ -138,6 +167,7 @@ public class OperettaManager {
         this.main_reader = reader;
         this.metadata = (IMetadata) reader.getMetadataStore();
         this.downsample = downsample;
+        this.use_averaging = use_averaging;
         this.range = range;
         this.norm_max = norm_max;
         this.norm_min = norm_min;
@@ -635,7 +665,8 @@ public class OperettaManager {
                                     ip = ip.crop();
                                 }
 
-                                ip = ip.resize(ip.getWidth() / this.downsample, ip.getHeight() / this.downsample);
+                                // Add option to downsample with averaging
+                                ip = ip.resize(ip.getWidth() / this.downsample, ip.getHeight() / this.downsample, this.use_averaging);
 
                                 // logger.info("File {}", files.get( i ));
                                 String label = String.format("R%d-C%d - (c:%d, z:%d, t:%d) - %s", row, column, plane_indexes.get("C"), plane_indexes.get("Z"), plane_indexes.get("T"), new File(files.get(i)).getName());
@@ -754,6 +785,17 @@ public class OperettaManager {
         }
     }
 
+    /**
+     * Processes all fields in all wells based on the desired builder options.
+     * @see OperettaManager.Builder
+     */
+    public void process() { process( null, null, null ); }
+
+    /**
+     * Processes all fields in the selected wells based on the desired builder options.
+     * @see OperettaManager.Builder
+     */
+    public void process(List<Well> wells) { process( wells, null, null ); }
 
     /**
      * this method tries to simplify the processing for a full export
@@ -891,7 +933,7 @@ public class OperettaManager {
     public String toString() {
         int nWells = getWells().size();
         int nFields = getFieldIds().size();
-        long[] dims = utils.getIODimensions(this.downsample);
+        long[] dims = utils.getIODimensions();
 
         String expName;
         try {
@@ -906,6 +948,8 @@ public class OperettaManager {
         dataInfo += "\n\n Operetta Manager parameters:\n";
 
         dataInfo += String.format("- Downsample factor: %d\n", downsample);
+        dataInfo += String.format("\t- Use averaging when downsampling: %b\n", use_averaging);
+
         dataInfo += String.format("- Fusing fields: %b\n- Use Grid/Collection Stitching for fusion: %b\n\n", this.fuse_fields, this.use_stitcher);
         dataInfo += String.format("- Tile position correction factor: %.2f\n\t- Horizontal camera flip: %b\n\t- Vertical camera flip: %b\n\t", this.correction_factor, this.flip_horizontal, this.flip_vertical);
         dataInfo += String.format("- 32-bit Digital Phase Contrast image normalization\n\t\t- Min: %.2f\n\t\t- Max: %.2f\n\n", this.norm_min, this.norm_max);
@@ -959,17 +1003,6 @@ public class OperettaManager {
     }
 
     /**
-     * Check Rois for overlap, as rectangles only
-     *
-     * @param one   the first roi
-     * @param other the second roi
-     * @return true if there is an overlap
-     */
-    private boolean isOverlapping(Roi one, Roi other) {
-        return one.getBounds().intersects(other.getBounds());
-    }
-
-    /**
      * Finds fields related to the bounds that were given, to limit the number of files to export
      *
      * @param fields the fields to check intersections in
@@ -1008,24 +1041,13 @@ public class OperettaManager {
 
             Roi other = new Roi(x, y, w, h);
 
-            return isOverlapping(bounds, other);
+            return utils.isOverlapping(bounds, other);
 
         }).collect(Collectors.toList());
         //imp.show();
         // Sort through them
         IJ.log("Selected Samples: " + selected);
         return selected;
-    }
-
-    /**
-     * reduces or enlarges ROI coordinates to match resampling
-     *
-     * @param r the roi
-     * @param s the downsample factor
-     * @return a new Roi with adjusted size
-     */
-    private Roi resampleRoi(Roi r, int s) {
-        return new Roi(r.getBounds().x / s, r.getBounds().y / s, r.getBounds().width / s, r.getBounds().height / s);
     }
 
     /**
@@ -1118,6 +1140,7 @@ public class OperettaManager {
         private boolean is_fuse_fields = false;
         private boolean is_use_stitcher = false;
         private StitchingParameters stitching_parameters = null;
+        private boolean use_averaging = false;
 
         public Builder setStitchingParameters(StitchingParameters stitching_parameters) {
             this.stitching_parameters = stitching_parameters;
@@ -1280,6 +1303,16 @@ public class OperettaManager {
         }
 
         /**
+         * Use averaging when downsampling the images
+         * @param use_averaging true if we use averaging when downsampling the images
+         * @return a Builder object, to continue building parameters
+         */
+        public Builder useAveraging( boolean use_averaging) {
+            this.use_averaging = use_averaging;
+            return this;
+        }
+
+        /**
          * Optional: adds a way to monitor the progression of a process using scijava TaskService
          *
          * @param taskService a service that monitors the progression of a process
@@ -1297,16 +1330,42 @@ public class OperettaManager {
          */
         public OperettaManager build() {
 
-            File id = this.id;
+            if (this.id != null) {
+                File id = this.id;
 
-            try {
-                // Create the reader
-                if (reader == null) {
-                    reader = createReader(id.getAbsolutePath());
+                if (this.id.isDirectory()) {
+                    XMLFILE file = null;
+                    for (XMLFILE version : XMLFILE.values()) {
+                        File candidate = new File(this.id, version.getIndexFileName());
+                        if (candidate.exists()) {
+                            file = version;
+                            break;
+                        }
+                    }
+                    // A few checks and warning for big files
+                    if (file == null) {
+                        log.error("o matching Index files found in " + this.id.getAbsolutePath());
+                        log.error("Implemented valid Index files:");
+                        for (XMLFILE version : XMLFILE.values()) {
+                            log.error("\t" + version.getIndexFileName() + " (" + version.getDescription() + ")");
+                        }
+                        return null;
+                    }
+                    // If we found the file, set it
+                    id = new File(this.id, file.getIndexFileName());
                 }
 
-                //log.info( "Current range is {}", range );
-                if (this.range == null) {
+                try {
+                    // Create the reader
+                    if (reader == null) {
+                        reader = createReader(id.getAbsolutePath());
+                    }
+                } catch (Exception e) {
+                    log.error("Issue when creating reader for file {}", id);
+                    return null;
+                }
+            }
+             if (this.range == null) {
                     this.range = new HyperRange.Builder().fromMetadata((IMetadata) reader.getMetadataStore()).build();
                 } else {
                     if (this.range.getTotalPlanes() == 0) {
@@ -1320,12 +1379,12 @@ public class OperettaManager {
                 }
 
                 if (this.save_folder == null) {
-                    //TODO
                     log.warn("You did not specify a save path for the Operetta Manager object");
                 }
 
                 return new OperettaManager(reader,
                         this.downsample,
+                        this.use_averaging,
                         this.range,
                         this.norm_min,
                         this.norm_max,
@@ -1339,12 +1398,6 @@ public class OperettaManager {
                         this.is_use_stitcher,
                         this.stitching_parameters,
                         this.taskService);
-
-            } catch (Exception e) {
-                log.error("Issue when creating reader for file {}", id);
-                return null;
-            }
-
         }
 
         /**
@@ -1500,7 +1553,7 @@ public class OperettaManager {
          * @param field the field for which we need to find the coordinates
          * @return a 2D Point with the xy pixel position of the field
          */
-        private Point getUncalibratedCoordinates(WellSample field) {
+        public Point getUncalibratedCoordinates(WellSample field) {
             Long px = getUncalibratedPositionX(field);
             Long py = getUncalibratedPositionY(field);
             if ((px == null) || (py == null)) {
@@ -1628,14 +1681,35 @@ public class OperettaManager {
         }
 
         /**
+         * reduces or enlarges ROI coordinates to match resampling
+         *
+         * @param r the roi
+         * @param s the downsample factor
+         * @return a new Roi with adjusted size
+         */
+        private Roi resampleRoi(Roi r, int s) {
+            return new Roi(r.getBounds().x / s, r.getBounds().y / s, r.getBounds().width / s, r.getBounds().height / s);
+        }
+
+        /**
+         * Check Rois for overlap, as rectangles only
+         *
+         * @param one   the first roi
+         * @param other the second roi
+         * @return true if there is an overlap
+         */
+        private boolean isOverlapping(Roi one, Roi other) {
+            return one.getBounds().intersects(other.getBounds());
+        }
+
+        /**
          * TODO : fix estimation of output bytes - check if this is correct
          *
          * @param wells                all the Wells to process as a list
          * @param fields               all the Field IDs to process, as a list, set to null to process all
-         * @param downscale            the downscale factor
          * @return array of bytes that will be read from the dataset and written to the export folder when calling {@link OperettaManager#process(List, List, Roi)}
          */
-        public long[] getIOBytes(List<Well> wells, List<Integer> fields, int downscale) {
+        public long[] getIOBytes(List<Well> wells, List<Integer> fields) {
 
             long nWells = wells.size();
             long nFields = fields.size();
@@ -1649,8 +1723,8 @@ public class OperettaManager {
             long nFieldsOut = nFields;
 
             //long nTotalPlanesOut = range.getTotalPlanes(); // c / z / t
-            long sXOut = main_reader.getSizeX() / downscale;
-            long sYOut = main_reader.getSizeY() / downscale;
+            long sXOut = main_reader.getSizeX() / downsample;
+            long sYOut = main_reader.getSizeY() / downsample;
             long sZOut = is_projection ? 1 : getRange().getRangeZ().size();
             long sCOut = getRange().getRangeC().size();
             long sTOut = getRange().getRangeT().size();
@@ -1661,20 +1735,19 @@ public class OperettaManager {
         /**
          * Returns all dimensions for the data that we wish to export for size and time estimations
          *
-         * @param downscale an eventual downscale factor
          * @return an array with the full dataset sizes(sX, sY, sZ, sC, sT) and selected or
          * downscaled sizes (sXOut, sYOut, sZOut, sCOut, sTOut)
          */
 
-        public long[] getIODimensions(int downscale) {
+        public long[] getIODimensions() {
             long sX = main_reader.getSizeX();
             long sY = main_reader.getSizeY();
             long sZ = main_reader.getSizeZ();
             long sC = main_reader.getSizeC();
             long sT = main_reader.getSizeT();
 
-            long sXOut = main_reader.getSizeX() / downscale;
-            long sYOut = main_reader.getSizeY() / downscale;
+            long sXOut = main_reader.getSizeX() / downsample;
+            long sYOut = main_reader.getSizeY() / downsample;
             long sZOut = is_projection ? 1 : getRange().getRangeZ().size();
             long sCOut = getRange().getRangeC().size();
             long sTOut = getRange().getRangeT().size();

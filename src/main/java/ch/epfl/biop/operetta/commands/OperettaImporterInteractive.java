@@ -106,20 +106,24 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
     @Parameter(label = "Downsample factor", callback = "updateMessage")
     int downsample = 4;
+
+    @Parameter(label = "Use averaging when downsampling", callback = "updateMessage")
+    boolean use_averaging = false;
+
     @Parameter(label = "Save directory", style = FileWidget.DIRECTORY_STYLE)
     File save_directory = new File(System.getProperty("user.home") + File.separator);
 
-    @Parameter(label = "Selected wells. Leave blank for all", callback = "updateMessage", required = false, persist = false)
+    @Parameter(label = "Selected Wells. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_wells_str = "";
     @Parameter(label = "Choose Wells", callback = "wellChooser", required = false, persist = false)
     private Button choose_wells;
-    @Parameter(label = "Selected fields. Leave blank for all", callback = "updateMessage", required = false, persist = false)
+    @Parameter(label = "Selected Fields. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_fields_str = "";
-    @Parameter(label = "Choose fields", callback = "fieldChooser", required = false, persist = false)
+    @Parameter(label = "Choose Fields", callback = "fieldChooser", required = false, persist = false)
     private Button choose_fields;
-    @Parameter(label = "Fuse fields", callback = "updateMessage", required = false)
+    @Parameter(label = "Fuse Fields", callback = "updateMessage", required = false)
     private FUSE_MODE fuse_mode = FUSE_MODE.NONE;
-    @Parameter(label = "Preview well slice", callback = "previewWell", required = false, persist = false)
+    @Parameter(label = "Preview Well slice", callback = "previewWell", required = false, persist = false)
     private Button open_slice;
 
     @Parameter(label = "Flip images", callback = "updateMessage", required = false)
@@ -128,17 +132,17 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     @Parameter(label = "Select ranges", callback = "updateMessage", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String range = "You can use commas or colons to separate ranges. eg. '1:10' or '1,3,5,8' ";
 
-    @Parameter(label = "Selected channels. Leave blank for all", callback = "updateMessage", required = false)
+    @Parameter(label = "Select channels. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_channels_str = "";
-    @Parameter(label = "Selected slices. Leave blank for all", callback = "updateMessage", required = false)
+    @Parameter(label = "Select slices. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_slices_str = "";
-    @Parameter(label = "Selected timepoints. Leave blank for all", callback = "updateMessage", required = false)
+    @Parameter(label = "Select timepoints. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_timepoints_str = "";
 
-    @Parameter(label = "Perform Projection of Data", choices = {"No Projection", "Average Intensity", "Max Intensity", "Min Intensity", "Sum Slices", "Standard Deviation", "Median"}, callback = "updateMessage")
+    @Parameter(label = "Perform projection", choices = {"No Projection", "Average Intensity", "Max Intensity", "Min Intensity", "Sum Slices", "Standard Deviation", "Median"}, callback = "updateMessage")
     String z_projection_method;
 
-    @Parameter(label = "Choose Data Range", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
+    @Parameter(label = "Choose pixel data range", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String norm = "Useful if you have digital phase images which could be 32-bit";
     @Parameter(label = "Min Value")
     Integer norm_min = 0;
@@ -146,7 +150,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     Integer norm_max = (int) Math.pow(2, 16) - 1;
 
     @Parameter(visibility = ItemVisibility.MESSAGE, persist = false, style = "message")
-    String task_summary = "Click on 'Update Data Estimation'";
+    String task_summary = "Summary";
 
     @Parameter(label = "Process", callback = "doProcess", persist = false)
     Button process;
@@ -223,6 +227,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
             opm = opm_builder
                     .setRange(range)
                     .setDownsample(downsample)
+                    .useAveraging(use_averaging)
                     .flipHorizontal(flip_mode.flipH)
                     .flipVertical(flip_mode.flipV)
                     .setProjectionMethod(this.z_projection_method)
@@ -256,9 +261,9 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
             List<Integer> field_ids = selected_fields.stream().map(w -> Integer.parseInt(w.trim().split(" ")[1]) - 1).collect(Collectors.toList());
 
-            long[] bytes = opm.getUtilities().getIOBytes(wells, field_ids, this.downsample);
+            long[] bytes = opm.getUtilities().getIOBytes(wells, field_ids);
 
-            long[] dimsIO = opm.getUtilities().getIODimensions(downsample);
+            long[] dimsIO = opm.getUtilities().getIODimensions();
 
             String oriSize = "<strong>Original Size</strong>: W: " + oriWellsNumber + ", F:" + oriFieldsNumber + ", X:" + dimsIO[0] + ", Y:" + dimsIO[1] + ", Z:" + dimsIO[2] + ", C:" + dimsIO[3] + ", T:" + dimsIO[4];
             String exportSize = "<strong>Exported Size</strong>: W: " + selected_wells.size() + ", F:" + selected_fields.size() + ", X:" + dimsIO[5] + ", Y:" + dimsIO[6] + ", Z:" + dimsIO[7] + ", C:" + dimsIO[8] + ", T:" + dimsIO[9];
@@ -388,6 +393,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         opm = opm_builder
                 .setRange(range)
                 .setDownsample(downsample)
+                .useAveraging(use_averaging)
                 .setProjectionMethod(this.z_projection_method)
                 .setSaveFolder(this.save_directory)
                 .setNormalization(norm_min, norm_max)
