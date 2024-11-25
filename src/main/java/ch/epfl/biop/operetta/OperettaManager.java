@@ -446,6 +446,7 @@ public class OperettaManager {
      * Returns a stitched stack for the given well and associated fields
      *
      * @param well   the well to export
+     * @param fields the fields that we want to use for this well
      * @param bounds a ROI describing the subregion we want to export (pixel coordinates)
      * @return an ImageStack
      */
@@ -794,6 +795,8 @@ public class OperettaManager {
     /**
      * Processes all fields in the selected wells based on the desired builder options.
      * @see OperettaManager.Builder
+     *
+     * @param wells the list of Wells we want to process
      */
     public void process(List<Well> wells) { process( wells, null, null ); }
 
@@ -1294,7 +1297,7 @@ public class OperettaManager {
         /**
          * Set the downsampling from the builder
          *
-         * @param downsample a downsample factor > 1 explaining by how much we should reduce the XY image
+         * @param downsample a downsample factor &gt; 1 explaining by how much we should reduce the XY image
          * @return a Builder object, to continue building parameters
          */
         public Builder setDownsample(int downsample) {
@@ -1316,6 +1319,7 @@ public class OperettaManager {
          * Optional: adds a way to monitor the progression of a process using scijava TaskService
          *
          * @param taskService a service that monitors the progression of a process
+         * @return this Builder, to continue building options
          */
         public Builder setTaskService(TaskService taskService) {
             this.taskService = taskService;

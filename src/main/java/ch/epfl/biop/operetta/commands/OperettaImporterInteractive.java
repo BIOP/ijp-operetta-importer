@@ -432,6 +432,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     /**
      * Returns the available Fields as a String list with format [Field #, Field #,...]
      *
+     * @param opm the {@link OperettaManager} instance to use
      * @return a list of field ids as Strings
      */
     public List<String> getAvailableFieldsString(OperettaManager opm ) {
@@ -447,6 +448,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     /**
      * Returns the available Wells as a String list with format [R#-C#, R#-C#,...]
      *
+     * @param opm the {@link OperettaManager} instance to use
      * @return aa list of Strings with the Well names
      */
     public List<String> getAvailableWellsString(OperettaManager opm ) {
