@@ -26,7 +26,7 @@ def sources = HyperRange.parseString( sources_str )
 def targets = HyperRange.parseString( targets_str )
 
 
-def allWells = opm.getAvailableWells( )
+def allWells = opm.getWells( )
 
 // Grab pixel size
 def cal = opm.getCalibration()
@@ -46,7 +46,7 @@ target_dir.mkdirs()
 //Process all wells
 
 allWells.each{ well ->
-	def fields = opm.getAvailableFields( well )
+	def fields = opm.getFields( well )
 
 
 	fields.each { field ->

@@ -407,4 +407,11 @@ public class HyperRange {
             return new HyperRange(range_c, range_z, range_t);
         }
     }
+
+
+    public static String prettyPrint( List<Integer> list) {
+        StringJoiner joiner = new StringJoiner(",");
+        list.forEach(item -> joiner.add(item.toString()));
+        return joiner.toString();
+    }
 }
