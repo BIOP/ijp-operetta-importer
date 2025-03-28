@@ -123,6 +123,8 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     private Button choose_fields;
     @Parameter(label = "Fuse Fields", callback = "updateMessage", required = false)
     private FUSE_MODE fuse_mode = FUSE_MODE.NONE;
+    @Parameter(label = "Save as OME-TIFF", callback = "updateMessage", required = false)
+    private boolean save_as_ome_tiff = false;
     @Parameter(label = "Preview Well slice", callback = "previewWell", required = false, persist = false)
     private Button open_slice;
 
@@ -230,6 +232,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
                     .useAveraging(use_averaging)
                     .flipHorizontal(flip_mode.flipH)
                     .flipVertical(flip_mode.flipV)
+                    .saveAsOMETIFF(save_as_ome_tiff)
                     .setProjectionMethod(this.z_projection_method)
                     .setNormalization(norm_min, norm_max)
                     .coordinatesCorrectionFactor(correctionFactor)

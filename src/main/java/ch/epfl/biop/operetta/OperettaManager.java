@@ -22,6 +22,10 @@
 package ch.epfl.biop.operetta;
 
 import ch.epfl.biop.operetta.commands.OperettaImporter;
+import ch.epfl.biop.operetta.companion.CompanionFileGenerator;
+import ch.epfl.biop.operetta.companion.ImageCompanion;
+import ch.epfl.biop.operetta.companion.PlateCompanion;
+import ch.epfl.biop.operetta.companion.WellCompanion;
 import ch.epfl.biop.operetta.utils.HyperRange;
 import ij.IJ;
 import ij.ImagePlus;
@@ -51,8 +55,12 @@ import ome.units.quantity.Length;
 import ome.units.quantity.Time;
 import ome.xml.meta.MetadataRetrieve;
 import ome.xml.meta.OMEXMLMetadataRoot;
+import ome.xml.model.Plate;
 import ome.xml.model.Well;
 import ome.xml.model.WellSample;
+import ome.xml.model.enums.DimensionOrder;
+import ome.xml.model.enums.NamingConvention;
+import ome.xml.model.enums.PixelType;
 import org.perf4j.StopWatch;
 import org.scijava.task.Task;
 import org.scijava.task.TaskService;
@@ -102,6 +110,7 @@ public class OperettaManager {
     private final int downsample;
     private final boolean fuse_fields;
     private final boolean use_stitcher;
+    private final boolean save_as_ome_tiff;
     private StitchingParameters stitching_parameters;
     private final Utilities utils;
     private final TaskService taskService; // Task monitoring and cancellation
@@ -160,6 +169,7 @@ public class OperettaManager {
                             double correction_factor,
                             boolean fuse_fields,
                             boolean use_stitcher,
+                            boolean save_as_ome_tiff,
                             StitchingParameters stitching_parameters,
                             TaskService taskService) {
 
@@ -181,6 +191,7 @@ public class OperettaManager {
 
         this.fuse_fields = fuse_fields;
         this.use_stitcher = use_stitcher;
+        this.save_as_ome_tiff = save_as_ome_tiff;
         this.stitching_parameters = stitching_parameters;
         this.px_size = metadata.getPixelsPhysicalSizeX(0);
         this.utils = new Utilities();
@@ -839,6 +850,18 @@ public class OperettaManager {
         double percentageCompleteness;
 
         try {
+            CompanionFileGenerator companionFileGenerator = new CompanionFileGenerator();
+            // set the plate we are working on
+            PlateCompanion plateCompanion = new PlateCompanion.Builder()
+                    .setName(getPlateName())
+                    .setNRows(8)
+                    .setNColumns(12)
+                    .setColumnNamingConvention(NamingConvention.NUMBER)
+                    .setRowNamingConvention(NamingConvention.LETTER)
+                    .build();
+            companionFileGenerator.setPlate(plateCompanion.createPlate());
+            String plateAcquisitionId = companionFileGenerator.createPlateAcquisition(null);
+
             for (Well well : wells) {
                 if (taskWell != null) {
                     if (taskWell.isCanceled()) {
@@ -908,7 +931,52 @@ public class OperettaManager {
                     ImagePlus well_image = this.getWellImage(well, well_fields, region);
                     String name = getWellImageName(well);
                     if (well_image != null) {
-                        IJ.saveAsTiff(well_image, new File(save_folder, name + ".tif").getAbsolutePath());
+                        if(this.save_as_ome_tiff) {
+                            saveAsOMETIFF(well_image, well, new File(save_folder, name + ".tif").getAbsolutePath());
+
+                            PixelType pixelType;
+                            boolean isRGB = false;
+                            switch (well_image.getType()) {
+                                case (ImagePlus.COLOR_RGB):
+                                    isRGB = true;
+                                case (ImagePlus.COLOR_256):
+                                case (ImagePlus.GRAY8):
+                                    pixelType = PixelType.UINT8;
+                                    break;
+                                case (ImagePlus.GRAY16):
+                                    pixelType = PixelType.UINT16;
+                                    break;
+                                case (ImagePlus.GRAY32):
+                                    pixelType = PixelType.FLOAT;
+                                    break;
+                                default:
+                                    throw new IllegalArgumentException("Unknown ImagePlus type " + well_image.getType());
+                            }
+
+                            Calibration cal = well_image.getCalibration();
+
+                            WellCompanion wellCompanion = new WellCompanion.Builder()
+                                    .setRow(well.getRow().getValue())
+                                    .setColumn(well.getColumn().getValue())
+                                    .build();
+                            String wellId = companionFileGenerator.addWell(wellCompanion.createWell());
+                            ImageCompanion imageCompanion = new ImageCompanion.Builder()
+                                    .setName(name + ".tif")
+                                    .setPixelSizeX(new Length(cal.pixelWidth, UNITS.MICROMETER))
+                                    .setPixelSizeY(new Length(cal.pixelHeight, UNITS.MICROMETER))
+                                    .setDimensionOrder(DimensionOrder.XYCZT)
+                                    .setPixelType(pixelType)
+                                    .setSizeC(well_image.getNChannels())
+                                    .setSizeT(well_image.getNFrames())
+                                    .setSizeZ(well_image.getNSlices())
+                                    .setSizeY(well_image.getHeight())
+                                    .setSizeX(well_image.getWidth())
+                                    .build();
+                            companionFileGenerator.addImage(imageCompanion.createImage(), wellId, plateAcquisitionId,
+                                    imageCompanion.createMapAnnotations(), imageCompanion.createTagAnnotations());
+                        }
+                        else
+                            IJ.saveAsTiff(well_image, new File(save_folder, name + ".tif").getAbsolutePath());
                     }
                 }
                 Instant ends = Instant.now();
@@ -921,6 +989,10 @@ public class OperettaManager {
 
             Instant global_ends = Instant.now();
             IJ.log(" DONE! All wells processed in " + (Duration.between(global_start, global_ends).getSeconds() / 60) + " min.");
+            //TODO change definition of method to get a File instead of a string
+            companionFileGenerator.buildCompanionFromImageFolder(save_folder.getAbsolutePath(), "Test");
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             if (taskWell != null) {
                 taskWell.finish();
@@ -931,6 +1003,11 @@ public class OperettaManager {
         }
     }
 
+
+    private void saveAsOMETIFF(ImagePlus well_image, Well well, String savingPath){
+        // convert image into OME-TIFF with kheops
+        IJ.saveAsTiff(well_image, savingPath);
+    }
 
     @Override
     public String toString() {
@@ -1142,6 +1219,7 @@ public class OperettaManager {
         private int downsample = 1;
         private boolean is_fuse_fields = false;
         private boolean is_use_stitcher = false;
+        private boolean save_as_ome_tiff = false;
         private StitchingParameters stitching_parameters = null;
         private boolean use_averaging = false;
 
@@ -1161,6 +1239,11 @@ public class OperettaManager {
         public Builder useStitcher( boolean is_use_stitcher) {
             this.is_use_stitcher = is_use_stitcher;
             if (is_use_stitcher)  this.is_fuse_fields = true;
+            return this;
+        }
+
+        public Builder saveAsOMETIFF( boolean save_as_ome_tiff) {
+            this.save_as_ome_tiff = save_as_ome_tiff;
             return this;
         }
 
@@ -1400,6 +1483,7 @@ public class OperettaManager {
                         this.correction_factor,
                         this.is_fuse_fields,
                         this.is_use_stitcher,
+                        this.save_as_ome_tiff,
                         this.stitching_parameters,
                         this.taskService);
         }
