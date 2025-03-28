@@ -63,6 +63,7 @@ import ome.xml.model.Well;
 import ome.xml.model.WellSample;
 import ome.xml.model.enums.DimensionOrder;
 import ome.xml.model.enums.PixelType;
+import ome.xml.model.primitives.Timestamp;
 import org.apache.commons.io.FilenameUtils;
 import org.perf4j.StopWatch;
 import org.scijava.Context;
@@ -768,6 +769,14 @@ public class OperettaManager {
         return ((OMEXMLMetadataRoot)metadata.getRoot()).getInstrument(fieldIndex);
     }
 
+    public Timestamp getAcquisitionDate(int fieldIndex){
+        return ((OMEXMLMetadataRoot)metadata.getRoot()).getImage(fieldIndex).getAcquisitionDate();
+    }
+
+    public DimensionOrder getDimensionOrder(int fieldIndex){
+        return ((OMEXMLMetadataRoot)metadata.getRoot()).getImage(fieldIndex).getPixels().getDimensionOrder();
+    }
+
     /**
      * Internal single tiff plane reader. We assume all tiff images are single
      * plane images that can be 8, 16 or 32 bits.
@@ -879,11 +888,11 @@ public class OperettaManager {
 
         try {
             Plate plate = getPlate();
+            String startTime = plate.getPlateAcquisition(0).getStartTime().toString();
             CompanionFileGenerator companionFileGenerator = new CompanionFileGenerator();
             // set the plate we are working on
             PlateCompanion plateCompanion = new PlateCompanion.Builder()
                     .setName(getPlateName())
-                    .setDescription(plate.getDescription())
                     .setNRows(plate.getRows().getValue())
                     .setNColumns(plate.getColumns().getValue())
                     .setColumnNamingConvention(plate.getColumnNamingConvention())
@@ -959,21 +968,15 @@ public class OperettaManager {
                 } else {
                     // Need to give all the fields, otherwise we will get the origin wrong
                     ImagePlus well_image = this.getWellImage(well, well_fields, region);
-                    int serieId = well_fields.get(0).getIndex().getValue();
-                    List<Channel> channels = getChannels(serieId);
-                    ObjectiveSettings objectiveSettings = getObjectiveSettings(serieId);
-                    Instrument instrument = getInstrument(0);
                     String name = FilenameUtils.removeExtension(getWellImageName(well));
 
                     if (well_image != null) {
                         if(this.save_as_ome_tiff) {
-                            saveAsOMETIFF(well_image, well, save_folder.getAbsolutePath());
+                            saveAsOMETIFF(well_image, save_folder.getAbsolutePath());
 
                             PixelType pixelType;
-                            boolean isRGB = false;
                             switch (well_image.getType()) {
                                 case (ImagePlus.COLOR_RGB):
-                                    isRGB = true;
                                 case (ImagePlus.COLOR_256):
                                 case (ImagePlus.GRAY8):
                                     pixelType = PixelType.UINT8;
@@ -995,22 +998,27 @@ public class OperettaManager {
                                     .setColumn(well.getColumn().getValue())
                                     .build();
                             String wellId = companionFileGenerator.addWell(wellCompanion.createWell());
+
+                            int serieId = well_fields.get(0).getIndex().getValue();
+                            Instrument instrument = getInstrument(0);
                             String instrumentId = companionFileGenerator.setInstrument(instrument);
 
                             ImageCompanion imageCompanion = new ImageCompanion.Builder()
                                     .setName(name + ".ome.tiff")
+                                    .setDescription("PlateTypeName: "+plate.getDescription() + "\nMeasurementStartTime: " +startTime)
                                     .setPixelSizeX(new Length(cal.pixelWidth, UNITS.MICROMETER))
                                     .setPixelSizeY(new Length(cal.pixelHeight, UNITS.MICROMETER))
-                                    .setDimensionOrder(DimensionOrder.XYCZT)
+                                    .setDimensionOrder(getDimensionOrder(serieId))
                                     .setPixelType(pixelType)
                                     .setSizeC(well_image.getNChannels())
-                                    .addChannels(channels)
+                                    .addChannels(getChannels(serieId))
                                     .setSizeT(well_image.getNFrames())
                                     .setSizeZ(well_image.getNSlices())
                                     .setSizeY(well_image.getHeight())
                                     .setSizeX(well_image.getWidth())
-                                    .setObjectiveSettings(objectiveSettings)
+                                    .setObjectiveSettings(getObjectiveSettings(serieId))
                                     .setInstrument(instrument)
+                                    .setAcquisitionDate(getAcquisitionDate(serieId))
                                     .build();
                             companionFileGenerator.addImage(imageCompanion.createImage(), wellId, plateAcquisitionId,
                                     imageCompanion.createMapAnnotations(), imageCompanion.createTagAnnotations());
@@ -1044,7 +1052,7 @@ public class OperettaManager {
     }
 
 
-    private void saveAsOMETIFF(ImagePlus well_image, Well well, String savingPath){
+    private void saveAsOMETIFF(ImagePlus well_image, String savingPath){
         // convert image into OME-TIFF with kheops
        if (ctx ==  null) throw new RuntimeException("Scijava context not set, cannot save as ome tiff");
 
