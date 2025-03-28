@@ -49,6 +49,7 @@ public class ImageCompanion {
     private List<String> tags;
     private Map<String, Map<String, String>> kvpsMapByNS;
     private Image image;
+    private List<Channel> channels;
 
     /**
      * ImageCompanion Constructor. This constructor is private as you need to use the Builder class
@@ -90,7 +91,8 @@ public class ImageCompanion {
                            ObjectiveSettings objectiveSettings,
                            StageLabel stageLabel,
                            LightSourceSettings lightSourceSettings,
-                           LightPath lightPath){
+                           LightPath lightPath,
+                           List<Channel> channels){
 
         this.image = null;
         this.name = name;
@@ -113,6 +115,7 @@ public class ImageCompanion {
         this.lightPath = lightPath;
         this.tags = new ArrayList<>();
         this.kvpsMapByNS = new HashMap<>();
+        this.channels = channels;
     }
 
 
@@ -187,18 +190,24 @@ public class ImageCompanion {
                 pixels.addTiffData(tiffData);
 
                 // Create <Channel/> under <Pixels/>
-                for (int i = 0; i < this.sizeC; i++) {
-                    Channel channel = new Channel();
-                    channel.setID("Channel:" + i);
+                if(this.channels.size() != this.sizeC) {
+                    for (int i = 0; i < this.sizeC; i++) {
+                        Channel channel = new Channel();
+                        channel.setID("Channel:" + i);
 
-                    // Create <LightSourceSettings/> and link to <Channel/>
-                    if(this.lightSourceSettings != null)
-                        channel.setLightSourceSettings(this.lightSourceSettings);
+                        // Create <LightSourceSettings/> and link to <Channel/>
+                        if (this.lightSourceSettings != null)
+                            channel.setLightSourceSettings(this.lightSourceSettings);
 
-                    if(this.lightPath != null)
-                        channel.setLightPath(this.lightPath);
+                        if (this.lightPath != null)
+                            channel.setLightPath(this.lightPath);
 
-                    pixels.addChannel(channel);
+                        pixels.addChannel(channel);
+                    }
+                }else{
+                    for (Channel channel: this.channels) {
+                        pixels.addChannel(channel);
+                    }
                 }
 
                 // Put <Pixels/> under <Image/>
@@ -343,6 +352,7 @@ public class ImageCompanion {
         private PixelType pixelType = null;
         private Length pixelSizeX = null;
         private Length pixelSizeY = null;
+        private List<Channel> channels = new ArrayList<>();
 
 
         public Builder setName(String name) {
@@ -439,6 +449,16 @@ public class ImageCompanion {
             return new ImageCompanion(image);
         }
 
+        public Builder addChannel(Channel channel){
+            this.channels.add(channel);
+            return this;
+        }
+
+        public Builder addChannels(List<Channel> channels){
+            this.channels.addAll(channels);
+            return this;
+        }
+
         public ImageCompanion build(){
             return new ImageCompanion(this.name,
                     this.description,
@@ -457,7 +477,8 @@ public class ImageCompanion {
                     this.objectiveSettings,
                     this.stageLabel,
                     this.lightSourceSettings,
-                    this.lightPath
+                    this.lightPath,
+                    this.channels
             );
         }
     }

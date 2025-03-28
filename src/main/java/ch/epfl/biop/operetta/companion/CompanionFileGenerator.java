@@ -198,9 +198,9 @@ public class CompanionFileGenerator {
         return id;
     }
 
-    public int setInstrument(Instrument instrument){
-        int id = Math.abs(new Random().nextInt());
-        instrument.setID(String.valueOf(id));
+    public String setInstrument(Instrument instrument){
+        String id = "Instrument:"+imageIndex++;
+        instrument.setID(id);
         this.instrument = instrument;
         return id;
     }

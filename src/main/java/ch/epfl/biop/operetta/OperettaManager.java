@@ -55,6 +55,9 @@ import ome.units.quantity.Length;
 import ome.units.quantity.Time;
 import ome.xml.meta.MetadataRetrieve;
 import ome.xml.meta.OMEXMLMetadataRoot;
+import ome.xml.model.Channel;
+import ome.xml.model.Instrument;
+import ome.xml.model.ObjectiveSettings;
 import ome.xml.model.Plate;
 import ome.xml.model.Well;
 import ome.xml.model.WellSample;
@@ -223,6 +226,12 @@ public class OperettaManager {
      */
     public HyperRange getRange() {
         return this.range;
+    }
+
+
+    public Plate getPlate(){
+        OMEXMLMetadataRoot r = (OMEXMLMetadataRoot) metadata.getRoot();
+        return r.getPlate(0);
     }
 
     /**
@@ -740,6 +749,18 @@ public class OperettaManager {
         return result;
     }
 
+    public List<Channel> getChannels(int fieldIndex){
+        return ((OMEXMLMetadataRoot)metadata.getRoot()).getImage(fieldIndex).getPixels().copyChannelList();
+    }
+
+    public ObjectiveSettings getObjectiveSettings(int fieldIndex){
+        return ((OMEXMLMetadataRoot)metadata.getRoot()).getImage(fieldIndex).getObjectiveSettings();
+    }
+
+    public Instrument getInstrument(int fieldIndex){
+        return ((OMEXMLMetadataRoot)metadata.getRoot()).getInstrument(fieldIndex);
+    }
+
     /**
      * Internal single tiff plane reader. We assume all tiff images are single
      * plane images that can be 8, 16 or 32 bits.
@@ -850,14 +871,16 @@ public class OperettaManager {
         double percentageCompleteness;
 
         try {
+            Plate plate = getPlate();
             CompanionFileGenerator companionFileGenerator = new CompanionFileGenerator();
             // set the plate we are working on
             PlateCompanion plateCompanion = new PlateCompanion.Builder()
                     .setName(getPlateName())
-                    .setNRows(8)
-                    .setNColumns(12)
-                    .setColumnNamingConvention(NamingConvention.NUMBER)
-                    .setRowNamingConvention(NamingConvention.LETTER)
+                    .setDescription(plate.getDescription())
+                    .setNRows(plate.getRows().getValue())
+                    .setNColumns(plate.getColumns().getValue())
+                    .setColumnNamingConvention(plate.getColumnNamingConvention())
+                    .setRowNamingConvention(plate.getRowNamingConvention())
                     .build();
             companionFileGenerator.setPlate(plateCompanion.createPlate());
             String plateAcquisitionId = companionFileGenerator.createPlateAcquisition(null);
@@ -929,6 +952,10 @@ public class OperettaManager {
                 } else {
                     // Need to give all the fields, otherwise we will get the origin wrong
                     ImagePlus well_image = this.getWellImage(well, well_fields, region);
+                    int serieId = well_fields.get(0).getIndex().getValue();
+                    List<Channel> channels = getChannels(serieId);
+                    ObjectiveSettings objectiveSettings = getObjectiveSettings(serieId);
+                    Instrument instrument = getInstrument(0);
                     String name = getWellImageName(well);
                     if (well_image != null) {
                         if(this.save_as_ome_tiff) {
@@ -960,6 +987,8 @@ public class OperettaManager {
                                     .setColumn(well.getColumn().getValue())
                                     .build();
                             String wellId = companionFileGenerator.addWell(wellCompanion.createWell());
+                            String instrumentId = companionFileGenerator.setInstrument(instrument);
+
                             ImageCompanion imageCompanion = new ImageCompanion.Builder()
                                     .setName(name + ".tif")
                                     .setPixelSizeX(new Length(cal.pixelWidth, UNITS.MICROMETER))
@@ -967,10 +996,13 @@ public class OperettaManager {
                                     .setDimensionOrder(DimensionOrder.XYCZT)
                                     .setPixelType(pixelType)
                                     .setSizeC(well_image.getNChannels())
+                                    .addChannels(channels)
                                     .setSizeT(well_image.getNFrames())
                                     .setSizeZ(well_image.getNSlices())
                                     .setSizeY(well_image.getHeight())
                                     .setSizeX(well_image.getWidth())
+                                    .setObjectiveSettings(objectiveSettings)
+                                    .setInstrument(instrument)
                                     .build();
                             companionFileGenerator.addImage(imageCompanion.createImage(), wellId, plateAcquisitionId,
                                     imageCompanion.createMapAnnotations(), imageCompanion.createTagAnnotations());
@@ -990,7 +1022,7 @@ public class OperettaManager {
             Instant global_ends = Instant.now();
             IJ.log(" DONE! All wells processed in " + (Duration.between(global_start, global_ends).getSeconds() / 60) + " min.");
             //TODO change definition of method to get a File instead of a string
-            companionFileGenerator.buildCompanionFromImageFolder(save_folder.getAbsolutePath(), "Test");
+            companionFileGenerator.buildCompanionFromImageFolder(save_folder.getAbsolutePath(), getPlateName());
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -1007,6 +1039,10 @@ public class OperettaManager {
     private void saveAsOMETIFF(ImagePlus well_image, Well well, String savingPath){
         // convert image into OME-TIFF with kheops
         IJ.saveAsTiff(well_image, savingPath);
+
+       /* IJ.run("Kheops - Convert Image to Pyramidal OME TIFF",
+                "image=["+well_image.getTitle()+"] output_dir=["+savingPath+"] compression=LZW subset_channels= subset_slices= subset_frames= compress_temp_files=false");
+   */
     }
 
     @Override

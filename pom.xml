@@ -74,6 +74,11 @@
 			<url>https://www.camilod.ca/the-team</url>
 			<properties><id>JoaoFirmino</id></properties>
 		</contributor>
+		<contributor>
+			<name>Rémy Dornier</name>
+			<url>http://biop.epfl.ch</url>
+			<properties><id>Rdornier</id></properties>
+		</contributor>
 	</contributors>
 
 	<mailingLists>
@@ -139,6 +144,11 @@
 			<groupId>sc.fiji</groupId>
 			<artifactId>Stitching_</artifactId>
 			<version>3.1.9</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.epfl.biop</groupId>
+			<artifactId>ijp-kheops</artifactId>
+			<version>0.6.0</version>
 		</dependency>
 	</dependencies>
 </project>
