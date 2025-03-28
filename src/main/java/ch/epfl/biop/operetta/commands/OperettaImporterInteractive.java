@@ -29,6 +29,7 @@ import ij.Prefs;
 import net.imagej.ImageJ;
 import ome.xml.model.Well;
 import ome.xml.model.WellSample;
+import org.scijava.Context;
 import org.scijava.Initializable;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
@@ -158,7 +159,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     Button process;
 
     @Parameter
-    TaskService taskService;
+    Context ctx;
 
     private String getMessage(long bytes_in, long bytes_out, String name, String oriSize, String exportSize) {
         DecimalFormat df = new DecimalFormat("#0.0");
@@ -238,7 +239,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
                     .coordinatesCorrectionFactor(correctionFactor)
                     .fuseFields(fuse_mode.fuse_fields)
                     .useStitcher(fuse_mode.stitch_fields)
-                    .setTaskService(taskService)
+                    .setContext(ctx)
                     .build();
 
             List<String> selected_wells = getAvailableWellsString( opm );

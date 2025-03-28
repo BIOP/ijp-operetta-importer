@@ -21,7 +21,7 @@
  */
 package ch.epfl.biop.operetta;
 
-import ch.epfl.biop.operetta.commands.OperettaImporter;
+import ch.epfl.biop.kheops.command.KheopsExportImagePlusCommand;
 import ch.epfl.biop.operetta.companion.CompanionFileGenerator;
 import ch.epfl.biop.operetta.companion.ImageCompanion;
 import ch.epfl.biop.operetta.companion.PlateCompanion;
@@ -62,9 +62,11 @@ import ome.xml.model.Plate;
 import ome.xml.model.Well;
 import ome.xml.model.WellSample;
 import ome.xml.model.enums.DimensionOrder;
-import ome.xml.model.enums.NamingConvention;
 import ome.xml.model.enums.PixelType;
+import org.apache.commons.io.FilenameUtils;
 import org.perf4j.StopWatch;
+import org.scijava.Context;
+import org.scijava.command.CommandService;
 import org.scijava.task.Task;
 import org.scijava.task.TaskService;
 import org.slf4j.Logger;
@@ -118,6 +120,7 @@ public class OperettaManager {
     private final Utilities utils;
     private final TaskService taskService; // Task monitoring and cancellation
     private final boolean use_averaging;
+    private final Context ctx;
 
     /**
      * List the types of valid XML files we should be looking for
@@ -174,7 +177,7 @@ public class OperettaManager {
                             boolean use_stitcher,
                             boolean save_as_ome_tiff,
                             StitchingParameters stitching_parameters,
-                            TaskService taskService) {
+                            Context ctx) {
 
         this.id = new File(reader.getCurrentFile());
         this.main_reader = reader;
@@ -198,7 +201,11 @@ public class OperettaManager {
         this.stitching_parameters = stitching_parameters;
         this.px_size = metadata.getPixelsPhysicalSizeX(0);
         this.utils = new Utilities();
-        this.taskService = taskService;
+
+        if (ctx ==  null) throw new RuntimeException("Scijava context not set, cannot save as ome tiff");
+
+        this.ctx = ctx;
+        this.taskService = ctx.getService(TaskService.class);
     }
 
     /**
@@ -956,10 +963,11 @@ public class OperettaManager {
                     List<Channel> channels = getChannels(serieId);
                     ObjectiveSettings objectiveSettings = getObjectiveSettings(serieId);
                     Instrument instrument = getInstrument(0);
-                    String name = getWellImageName(well);
+                    String name = FilenameUtils.removeExtension(getWellImageName(well));
+
                     if (well_image != null) {
                         if(this.save_as_ome_tiff) {
-                            saveAsOMETIFF(well_image, well, new File(save_folder, name + ".tif").getAbsolutePath());
+                            saveAsOMETIFF(well_image, well, save_folder.getAbsolutePath());
 
                             PixelType pixelType;
                             boolean isRGB = false;
@@ -990,7 +998,7 @@ public class OperettaManager {
                             String instrumentId = companionFileGenerator.setInstrument(instrument);
 
                             ImageCompanion imageCompanion = new ImageCompanion.Builder()
-                                    .setName(name + ".tif")
+                                    .setName(name + ".ome.tiff")
                                     .setPixelSizeX(new Length(cal.pixelWidth, UNITS.MICROMETER))
                                     .setPixelSizeY(new Length(cal.pixelHeight, UNITS.MICROMETER))
                                     .setDimensionOrder(DimensionOrder.XYCZT)
@@ -1038,11 +1046,25 @@ public class OperettaManager {
 
     private void saveAsOMETIFF(ImagePlus well_image, Well well, String savingPath){
         // convert image into OME-TIFF with kheops
-        IJ.saveAsTiff(well_image, savingPath);
+       if (ctx ==  null) throw new RuntimeException("Scijava context not set, cannot save as ome tiff");
 
-       /* IJ.run("Kheops - Convert Image to Pyramidal OME TIFF",
-                "image=["+well_image.getTitle()+"] output_dir=["+savingPath+"] compression=LZW subset_channels= subset_slices= subset_frames= compress_temp_files=false");
-   */
+       CommandService cs = ctx.getService(CommandService.class);
+
+        try {
+            cs.run(KheopsExportImagePlusCommand.class, true,
+                    "image", well_image,
+                    "output_dir", savingPath,
+                    "compression", "LZW",
+                    "subset_channels","",
+                    "subset_slices","",
+                    "subset_frames","",
+                    "message","",
+                    "compress_temp_files",false).get();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -1259,6 +1281,8 @@ public class OperettaManager {
         private StitchingParameters stitching_parameters = null;
         private boolean use_averaging = false;
 
+        private Context ctx = null;
+
         public Builder setStitchingParameters(StitchingParameters stitching_parameters) {
             this.stitching_parameters = stitching_parameters;
             this.is_use_stitcher = true;
@@ -1275,6 +1299,11 @@ public class OperettaManager {
         public Builder useStitcher( boolean is_use_stitcher) {
             this.is_use_stitcher = is_use_stitcher;
             if (is_use_stitcher)  this.is_fuse_fields = true;
+            return this;
+        }
+
+        public Builder setContext(Context ctx) {
+            this.ctx = ctx;
             return this;
         }
 
@@ -1435,17 +1464,6 @@ public class OperettaManager {
         }
 
         /**
-         * Optional: adds a way to monitor the progression of a process using scijava TaskService
-         *
-         * @param taskService a service that monitors the progression of a process
-         * @return this Builder, to continue building options
-         */
-        public Builder setTaskService(TaskService taskService) {
-            this.taskService = taskService;
-            return this;
-        }
-
-        /**
          * The build method handles creating an {@link OperettaManager} object from all the settings that were provided.
          * This is done so that everything, like the {@link HyperRange} that is defined is valid.
          *
@@ -1521,7 +1539,7 @@ public class OperettaManager {
                         this.is_use_stitcher,
                         this.save_as_ome_tiff,
                         this.stitching_parameters,
-                        this.taskService);
+                        this.ctx);
         }
 
         /**
