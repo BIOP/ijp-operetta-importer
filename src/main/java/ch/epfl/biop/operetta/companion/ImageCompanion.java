@@ -50,6 +50,7 @@ public class ImageCompanion {
     private Map<String, Map<String, String>> kvpsMapByNS;
     private Image image;
     private List<Channel> channels;
+    private Map<String, String> globalMetadata;
 
     /**
      * ImageCompanion Constructor. This constructor is private as you need to use the Builder class
@@ -92,7 +93,8 @@ public class ImageCompanion {
                            StageLabel stageLabel,
                            LightSourceSettings lightSourceSettings,
                            LightPath lightPath,
-                           List<Channel> channels){
+                           List<Channel> channels,
+                           Map<String, String> globalMetadata){
 
         this.image = null;
         this.name = name;
@@ -115,6 +117,7 @@ public class ImageCompanion {
         this.lightPath = lightPath;
         this.tags = new ArrayList<>();
         this.kvpsMapByNS = new HashMap<>();
+        this.globalMetadata = globalMetadata;
         this.channels = channels;
     }
 
@@ -147,6 +150,16 @@ public class ImageCompanion {
             image.setName(this.name);
             if(this.description != null)
                 image.setDescription(this.description);
+            if(!this.globalMetadata.isEmpty()){
+                String metadata = "";
+                for (String key: this.globalMetadata.keySet()){
+                    metadata += "\n"+key+": "+this.globalMetadata.get(key);
+                }
+                if(this.description != null)
+                    image.setDescription(this.description + "\n" + metadata);
+                else
+                    image.setDescription(metadata);
+            }
             if(this.acquisitionDate != null)
                 image.setAcquisitionDate(this.acquisitionDate);
             if(this.objectiveSettings != null)
@@ -353,6 +366,7 @@ public class ImageCompanion {
         private Length pixelSizeX = null;
         private Length pixelSizeY = null;
         private List<Channel> channels = new ArrayList<>();
+        private Map<String, String> globalMetadata = new HashMap<>();
 
 
         public Builder setName(String name) {
@@ -459,6 +473,18 @@ public class ImageCompanion {
             return this;
         }
 
+
+        public Builder addGlobalMetadata(Map<String, String> globalMetadata){
+            this.globalMetadata.putAll(globalMetadata);
+            return this;
+        }
+
+
+        public Builder addGlobalMetadata(String key, String value){
+            this.globalMetadata.put(key, value);
+            return this;
+        }
+
         public ImageCompanion build(){
             return new ImageCompanion(this.name,
                     this.description,
@@ -478,7 +504,8 @@ public class ImageCompanion {
                     this.stageLabel,
                     this.lightSourceSettings,
                     this.lightPath,
-                    this.channels
+                    this.channels,
+                    this.globalMetadata
             );
         }
     }

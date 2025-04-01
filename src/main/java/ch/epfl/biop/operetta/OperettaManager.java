@@ -888,8 +888,12 @@ public class OperettaManager {
 
         try {
             Plate plate = getPlate();
-            String startTime = plate.getPlateAcquisition(0).getStartTime().toString();
             CompanionFileGenerator companionFileGenerator = new CompanionFileGenerator();
+            Map<String, String> globalMetadataMap = this.main_reader.getGlobalMetadata()
+                    .entrySet()
+                    .stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, e->e.getValue().toString()));
+
             // set the plate we are working on
             PlateCompanion plateCompanion = new PlateCompanion.Builder()
                     .setName(getPlateName())
@@ -1005,7 +1009,7 @@ public class OperettaManager {
 
                             ImageCompanion imageCompanion = new ImageCompanion.Builder()
                                     .setName(name + ".ome.tiff")
-                                    .setDescription("PlateTypeName: "+plate.getDescription() + "\nMeasurementStartTime: " +startTime)
+                                    .addGlobalMetadata(globalMetadataMap)
                                     .setPixelSizeX(new Length(cal.pixelWidth, UNITS.MICROMETER))
                                     .setPixelSizeY(new Length(cal.pixelHeight, UNITS.MICROMETER))
                                     .setDimensionOrder(getDimensionOrder(serieId))

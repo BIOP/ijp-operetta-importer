@@ -84,7 +84,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -146,9 +145,10 @@ public class CompanionFileGenerator {
     Map<String, List<String>> plateWellMap = new HashMap<>();
     int plateIndex = 0;
     int wellIndex = 0;
-    int plateAcquisitionIndx = 0;
+    int plateAcquisitionIndex = 0;
     int wellSampleIndex = 0;
     int imageIndex = 0;
+    int instrumentIndex = 0;
 
     public CompanionFileGenerator(){
 
@@ -172,7 +172,7 @@ public class CompanionFileGenerator {
         if(finalPlate == null)
             throw new RuntimeException("You first need to set the plate by calling setPlate() method");
 
-        String id = "PlateAcquisition:"+plateAcquisitionIndx++;
+        String id = "PlateAcquisition:"+ plateAcquisitionIndex++;
         PlateAcquisition plateAcquisition = new PlateAcquisition();
         plateAcquisition.setID(id);
         plateAcquisition.setName(plateAcquisitionName);
@@ -199,7 +199,7 @@ public class CompanionFileGenerator {
     }
 
     public String setInstrument(Instrument instrument){
-        String id = "Instrument:"+imageIndex++;
+        String id = "Instrument:"+instrumentIndex++;
         instrument.setID(id);
         this.instrument = instrument;
         return id;
