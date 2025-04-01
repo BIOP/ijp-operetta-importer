@@ -154,15 +154,17 @@ public class CompanionFileGenerator {
 
     }
 
-    public String setPlate(Plate plate){
+    public String setPlate(PlateCompanion plateCompanion){
         String id = "Plate:"+plateIndex++;
+        Plate plate = plateCompanion.createPlate();
         plate.setID(id);
         finalPlate = plate;
         return id;
     }
 
-    public String addWell(Well well){
+    public String addWell(WellCompanion wellCompanion){
         String id = "Well:"+wellIndex++;
+        Well well = wellCompanion.createWell();
         well.setID(id);
         wellMap.put(id, well);
         return id;
@@ -185,12 +187,17 @@ public class CompanionFileGenerator {
         return id;
     }
 
-    public String addImage(Image image, String wellId, String plateAcquisitionId, List<MapAnnotation> keyValues, List<TagAnnotation> tags){
+    public String addImage(ImageCompanion imageCompanion, String wellId, String plateAcquisitionId){
         String id = "Image:"+imageIndex++;
+        Image image = imageCompanion.createImage();
         image.setID(id);
         imageMap.put(id, image);
         imageWellMap.put(id, wellId);
         imagePlateAcquisitionMap.put(id, plateAcquisitionId);
+
+        // create tags and key-value pairs
+        List<MapAnnotation> keyValues = imageCompanion.createMapAnnotations();
+        List<TagAnnotation> tags = imageCompanion.createTagAnnotations();
         if(keyValues != null && !keyValues.isEmpty())
             imageKVPsMap.put(id, keyValues);
         if(tags != null && !tags.isEmpty())

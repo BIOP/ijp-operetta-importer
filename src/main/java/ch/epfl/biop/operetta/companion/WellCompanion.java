@@ -2,12 +2,11 @@ package ch.epfl.biop.operetta.companion;
 
 import ome.xml.model.Well;
 import ome.xml.model.primitives.NonNegativeInteger;
-import ome.xml.model.primitives.PositiveInteger;
 
 public class WellCompanion {
-    private int row;
-    private int column;
-    private Well well;
+    private final int row;
+    private final int column;
+    private final Well well;
 
     /**
      * WellCompanion Constructor. This constructor is private as you need to use the Builder class
@@ -16,22 +15,13 @@ public class WellCompanion {
      * @param row
      * @param column
      */
-    private WellCompanion(int row,
+    private WellCompanion(Well well,
+                          int row,
                           int column){
 
-        this.well = null;
+        this.well = well;
         this.row = row;
         this.column = column;
-    }
-
-    /**
-     * WellCompanion Constructor. This constructor is private as you need to use the Builder class
-     * to generate the WellCompanion instance. {@link Builder}
-     *
-     * @param well
-     */
-    private WellCompanion(Well well){
-        this.well = well;
     }
 
     /**
@@ -40,7 +30,7 @@ public class WellCompanion {
      *
      * @return
      */
-    public Well createWell(){
+    protected Well createWell(){
         Well well;
         if(this.well != null){
             well = this.well;
@@ -81,6 +71,7 @@ public class WellCompanion {
     public static class Builder{
         private int row = 8;
         private int column = 12;
+        private Well well = null;
 
         public Builder setRow(int row) {
             this.row = row;
@@ -92,12 +83,14 @@ public class WellCompanion {
             return this;
         }
 
-        public WellCompanion setWell(Well well){
-            return new WellCompanion(well);
+        public Builder setWell(Well well){
+            this.well = well;
+            return this;
         }
 
         public WellCompanion build(){
-            return new WellCompanion(this.row,
+            return new WellCompanion(this.well,
+                    this.row,
                     this.column);
         }
     }

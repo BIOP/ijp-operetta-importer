@@ -902,7 +902,7 @@ public class OperettaManager {
                     .setColumnNamingConvention(plate.getColumnNamingConvention())
                     .setRowNamingConvention(plate.getRowNamingConvention())
                     .build();
-            companionFileGenerator.setPlate(plateCompanion.createPlate());
+            companionFileGenerator.setPlate(plateCompanion);
             String plateAcquisitionId = companionFileGenerator.createPlateAcquisition(null);
 
             for (Well well : wells) {
@@ -1001,7 +1001,7 @@ public class OperettaManager {
                                     .setRow(well.getRow().getValue())
                                     .setColumn(well.getColumn().getValue())
                                     .build();
-                            String wellId = companionFileGenerator.addWell(wellCompanion.createWell());
+                            String wellId = companionFileGenerator.addWell(wellCompanion);
 
                             int serieId = well_fields.get(0).getIndex().getValue();
                             Instrument instrument = getInstrument(0);
@@ -1024,8 +1024,7 @@ public class OperettaManager {
                                     .setInstrument(instrument)
                                     .setAcquisitionDate(getAcquisitionDate(serieId))
                                     .build();
-                            companionFileGenerator.addImage(imageCompanion.createImage(), wellId, plateAcquisitionId,
-                                    imageCompanion.createMapAnnotations(), imageCompanion.createTagAnnotations());
+                            companionFileGenerator.addImage(imageCompanion, wellId, plateAcquisitionId);
                         }
                         else
                             IJ.saveAsTiff(well_image, new File(save_folder, name + ".tif").getAbsolutePath());

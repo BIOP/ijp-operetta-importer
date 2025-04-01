@@ -7,13 +7,13 @@ import ome.xml.model.primitives.PositiveInteger;
 
 
 public class PlateCompanion {
-    private String name;
-    private NamingConvention columnNamingConvention;
-    private NamingConvention rowNamingConvention;
-    private int rows;
-    private int columns;
-    private String description;
-    private Plate plate;
+    private final String name;
+    private final NamingConvention columnNamingConvention;
+    private final NamingConvention rowNamingConvention;
+    private final int rows;
+    private final int columns;
+    private final String description;
+    private final Plate plate;
 
 
     /**
@@ -27,7 +27,8 @@ public class PlateCompanion {
      * @param columns
      * @param description
      */
-    private PlateCompanion(String name,
+    private PlateCompanion(Plate plate,
+                           String name,
                            NamingConvention columnNamingConvention,
                            NamingConvention rowNamingConvention,
                            int rows,
@@ -35,7 +36,7 @@ public class PlateCompanion {
                            String description){
 
 
-        this.plate= null;
+        this.plate= plate;
         this.name = name;
         this.columnNamingConvention = columnNamingConvention;
         this.rowNamingConvention = rowNamingConvention;
@@ -45,22 +46,12 @@ public class PlateCompanion {
     }
 
     /**
-     * PlateCompanion Constructor. This constructor is private as you need to use the Builder class
-     * to generate the PlateCompanion instance. {@link Builder}
-     *
-     * @param plate
-     */
-    private PlateCompanion(Plate plate){
-        this.plate = plate;
-    }
-
-    /**
      * Transform the current plateCompanion into a Plate object,
      * compatible with a companion.ome file
      *
      * @return
      */
-    public Plate createPlate(){
+    protected Plate createPlate(){
         Plate plate;
         if(this.plate != null){
             plate = this.plate;
@@ -113,6 +104,7 @@ public class PlateCompanion {
         private int rows = 8;
         private int columns = 12;
         private String description = null;
+        private Plate plate = null;
 
         public Builder setName(String name) {
             this.name = name;
@@ -144,12 +136,14 @@ public class PlateCompanion {
             return this;
         }
 
-        public PlateCompanion setPlate(Plate plate){
-            return new PlateCompanion(plate);
+        public Builder setPlate(Plate plate){
+            this.plate = plate;
+            return this;
         }
 
         public PlateCompanion build(){
-            return new PlateCompanion(this.name,
+            return new PlateCompanion(this.plate,
+                    this.name,
                     this.columnNamingConvention,
                     this.rowNamingConvention,
                     this.rows,

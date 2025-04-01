@@ -28,29 +28,29 @@ import java.util.List;
 import java.util.Map;
 
 public class ImageCompanion {
-    private String name;
-    private Timestamp acquisitionDate;
-    private String description;
-    private Instrument instrument;
-    private ObjectiveSettings objectiveSettings;
-    private ImagingEnvironment imagingEnvironment;
-    private StageLabel stageLabel;
-    private LightSourceSettings lightSourceSettings;
-    private LightPath lightPath;
-    private int sizeX;
-    private int sizeY;
-    private int sizeZ;
-    private int sizeC;
-    private int sizeT;
-    private DimensionOrder dimensionOrder;
-    private PixelType pixelType;
-    private Length pixelSizeX;
-    private Length pixelSizeY;
-    private List<String> tags;
-    private Map<String, Map<String, String>> kvpsMapByNS;
-    private Image image;
-    private List<Channel> channels;
-    private Map<String, String> globalMetadata;
+    private final String name;
+    private final Timestamp acquisitionDate;
+    private final String description;
+    private final Instrument instrument;
+    private final ObjectiveSettings objectiveSettings;
+    private final ImagingEnvironment imagingEnvironment;
+    private final StageLabel stageLabel;
+    private final LightSourceSettings lightSourceSettings;
+    private final LightPath lightPath;
+    private final int sizeX;
+    private final int sizeY;
+    private final int sizeZ;
+    private final int sizeC;
+    private final int sizeT;
+    private final DimensionOrder dimensionOrder;
+    private final PixelType pixelType;
+    private final Length pixelSizeX;
+    private final Length pixelSizeY;
+    private final List<String> tags;
+    private final Map<String, Map<String, String>> kvpsMapByNS;
+    private final Image image;
+    private final List<Channel> channels;
+    private final Map<String, String> globalMetadata;
 
     /**
      * ImageCompanion Constructor. This constructor is private as you need to use the Builder class
@@ -75,7 +75,8 @@ public class ImageCompanion {
      * @param lightSourceSettings
      * @param lightPath
      */
-    private ImageCompanion(String name,
+    private ImageCompanion(Image image,
+                           String name,
                            String description,
                            int sizeX,
                            int sizeY,
@@ -94,9 +95,11 @@ public class ImageCompanion {
                            LightSourceSettings lightSourceSettings,
                            LightPath lightPath,
                            List<Channel> channels,
-                           Map<String, String> globalMetadata){
+                           Map<String, String> globalMetadata,
+                           List<String> tags,
+                           Map<String, Map<String, String>> kvpsMapByNS){
 
-        this.image = null;
+        this.image = image;
         this.name = name;
         this.description = description;
         this.sizeX = sizeX;
@@ -115,23 +118,10 @@ public class ImageCompanion {
         this.stageLabel = stageLabel;
         this.lightSourceSettings = lightSourceSettings;
         this.lightPath = lightPath;
-        this.tags = new ArrayList<>();
-        this.kvpsMapByNS = new HashMap<>();
+        this.tags = tags;
+        this.kvpsMapByNS = kvpsMapByNS;
         this.globalMetadata = globalMetadata;
         this.channels = channels;
-    }
-
-
-    /**
-     * ImageCompanion Constructor. This constructor is private as you need to use the Builder class
-     * to generate the ImageCompanion instance. {@link Builder}
-     *
-     * @param image
-     */
-    private ImageCompanion(Image image){
-        this.image = image;
-        this.tags = new ArrayList<>();
-        this.kvpsMapByNS = new HashMap<>();
     }
 
 
@@ -141,7 +131,7 @@ public class ImageCompanion {
      *
      * @return
      */
-    public Image createImage(){
+    protected Image createImage(){
         Image image;
         if(this.image != null){
             image = this.image;
@@ -238,7 +228,7 @@ public class ImageCompanion {
      *
      * @return
      */
-    public List<TagAnnotation> createTagAnnotations(){
+    protected List<TagAnnotation> createTagAnnotations(){
         // Create <TagAnnotations/> for tags
         List<TagAnnotation> tagAnnotationList = new ArrayList<>();
         int i = 0;
@@ -258,7 +248,7 @@ public class ImageCompanion {
      *
      * @return
      */
-    public List<MapAnnotation> createMapAnnotations(){
+    protected List<MapAnnotation> createMapAnnotations(){
         // Create <MapAnnotations/> for key-values
         List<MapAnnotation> mapAnnotationList = new ArrayList<>();
         int i = 0;
@@ -278,39 +268,6 @@ public class ImageCompanion {
         return mapAnnotationList;
     }
 
-
-    public void addTag(String tag) {
-        this.tags.add(tag);
-    }
-
-
-    public void addTags(List<String> tags) {
-        this.tags.addAll(tags);
-    }
-
-
-    public void addKVPs(Map<String, String> kvps, String namespace) {
-        if (this.kvpsMapByNS.containsKey(namespace)) {
-            Map<String, String> kvp = this.kvpsMapByNS.get(namespace);
-            kvp.putAll(kvps);
-            this.kvpsMapByNS.put(namespace, kvp);
-        }else{
-            this.kvpsMapByNS.put(namespace, kvps);
-        }
-    }
-
-
-    public void addKVP(String key, String value, String namespace) {
-        if (this.kvpsMapByNS.containsKey(namespace)) {
-            Map<String, String> kvp = this.kvpsMapByNS.get(namespace);
-            kvp.put(key, value);
-            this.kvpsMapByNS.put(namespace, kvp);
-        }else{
-            Map<String, String> kvp = new HashMap<>();
-            kvp.put(key, value);
-            this.kvpsMapByNS.put(namespace, kvp);
-        }
-    }
 
 
     /**
@@ -367,6 +324,9 @@ public class ImageCompanion {
         private Length pixelSizeY = null;
         private List<Channel> channels = new ArrayList<>();
         private Map<String, String> globalMetadata = new HashMap<>();
+        private List<String> tags = new ArrayList<>();
+        private Map<String, Map<String, String>> kvpsMapByNS = new HashMap<>();
+        private Image image = null;
 
 
         public Builder setName(String name) {
@@ -459,8 +419,9 @@ public class ImageCompanion {
             return this;
         }
 
-        public ImageCompanion setImage(Image image){
-            return new ImageCompanion(image);
+        public Builder setImage(Image image){
+            this.image = image;
+            return this;
         }
 
         public Builder addChannel(Channel channel){
@@ -473,20 +434,48 @@ public class ImageCompanion {
             return this;
         }
 
-
         public Builder addGlobalMetadata(Map<String, String> globalMetadata){
             this.globalMetadata.putAll(globalMetadata);
             return this;
         }
-
 
         public Builder addGlobalMetadata(String key, String value){
             this.globalMetadata.put(key, value);
             return this;
         }
 
+        public void addTag(String tag) {
+            this.tags.add(tag);
+        }
+
+        public void addTags(List<String> tags) {
+            this.tags.addAll(tags);
+        }
+
+        public void addKVPs(Map<String, String> kvps, String namespace) {
+            if (this.kvpsMapByNS.containsKey(namespace)) {
+                Map<String, String> kvp = this.kvpsMapByNS.get(namespace);
+                kvp.putAll(kvps);
+                this.kvpsMapByNS.put(namespace, kvp);
+            }else{
+                this.kvpsMapByNS.put(namespace, kvps);
+            }
+        }
+
+        public void addKVP(String key, String value, String namespace) {
+            Map<String, String> kvp;
+            if (this.kvpsMapByNS.containsKey(namespace)) {
+                kvp = this.kvpsMapByNS.get(namespace);
+            }else{
+                kvp = new HashMap<>();
+            }
+            kvp.put(key, value);
+            this.kvpsMapByNS.put(namespace, kvp);
+        }
+
         public ImageCompanion build(){
-            return new ImageCompanion(this.name,
+            return new ImageCompanion(this.image,
+                    this.name,
                     this.description,
                     this.sizeX,
                     this.sizeY,
@@ -505,7 +494,9 @@ public class ImageCompanion {
                     this.lightSourceSettings,
                     this.lightPath,
                     this.channels,
-                    this.globalMetadata
+                    this.globalMetadata,
+                    this.tags,
+                    this.kvpsMapByNS
             );
         }
     }
