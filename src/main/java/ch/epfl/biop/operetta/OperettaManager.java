@@ -757,8 +757,16 @@ public class OperettaManager {
         return result;
     }
 
-    public List<Channel> getChannels(int fieldIndex){
-        return ((OMEXMLMetadataRoot)metadata.getRoot()).getImage(fieldIndex).getPixels().copyChannelList();
+    public List<Channel> getChannels(int fieldIndex, List<Integer> channels){
+        List<Channel> chList = new ArrayList<>();
+        List<Channel> originalChannels = ((OMEXMLMetadataRoot) metadata.getRoot())
+                .getImage(fieldIndex)
+                .getPixels()
+                .copyChannelList();
+        for(int chId : channels){
+            chList.add(originalChannels.get(chId-1));
+        }
+        return chList;
     }
 
     public ObjectiveSettings getObjectiveSettings(int fieldIndex){
@@ -1026,7 +1034,7 @@ public class OperettaManager {
                                     .setDimensionOrder(getDimensionOrder(serieId))
                                     .setPixelType(pixelType)
                                     .setSizeC(well_image.getNChannels())
-                                    .addChannels(getChannels(serieId))
+                                    .addChannels(getChannels(serieId, this.range.getRangeC()))
                                     .setSizeT(well_image.getNFrames())
                                     .setSizeZ(well_image.getNSlices())
                                     .setSizeY(well_image.getHeight())
