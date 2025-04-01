@@ -20,12 +20,13 @@ public class PlateCompanion {
      * PlateCompanion Constructor. This constructor is private as you need to use the Builder class
      * to generate the PlateCompanion instance. {@link Builder}
      *
-     * @param name
-     * @param columnNamingConvention
-     * @param rowNamingConvention
-     * @param rows
-     * @param columns
-     * @param description
+     * @param plate the Plate object if there is one
+     * @param name plate name that will appear on OMERO
+     * @param columnNamingConvention if rows are indexed by LETTER or NUMBER
+     * @param rowNamingConvention if columns are indexed by LETTER or NUMBER
+     * @param rows number of rows in the plate
+     * @param columns number of columns in the plate
+     * @param description plate description that will appear on omero
      */
     private PlateCompanion(Plate plate,
                            String name,
@@ -34,7 +35,6 @@ public class PlateCompanion {
                            int rows,
                            int columns,
                            String description){
-
 
         this.plate= plate;
         this.name = name;
@@ -49,7 +49,7 @@ public class PlateCompanion {
      * Transform the current plateCompanion into a Plate object,
      * compatible with a companion.ome file
      *
-     * @return
+     * @return the Plate object
      */
     protected Plate createPlate(){
         Plate plate;

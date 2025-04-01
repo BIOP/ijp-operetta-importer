@@ -56,15 +56,16 @@ public class ImageCompanion {
      * ImageCompanion Constructor. This constructor is private as you need to use the Builder class
      * to generate the ImageCompanion instance. {@link Builder}
      *
-     * @param name                  name of the image
-     * @param description           description of the images
+     * @param image                 the Image object
+     * @param name                  name of the image that will be displayed on OMERO
+     * @param description           description of the images that will be displayed on OMERO
      * @param sizeX                 image width
      * @param sizeY                 image height
      * @param sizeZ                 stack size
      * @param sizeC                 nChannels
      * @param sizeT                 nTimepoints
      * @param dimensionOrder        The order of how XYCZT are saved for this image
-     * @param pixelType             bit depth
+     * @param pixelType             image bit depth
      * @param pixelSizeX            Physical size x
      * @param pixelSizeY            Physical size y
      * @param acquisitionDate       TimeStamp of the acquisition date
@@ -74,6 +75,10 @@ public class ImageCompanion {
      * @param stageLabel
      * @param lightSourceSettings
      * @param lightPath
+     * @param channels              list of Channel objects
+     * @param globalMetadata        Any metadata to add under the image description
+     * @param tags                  List of tags to link to the image on OMERO
+     * @param kvpsMapByNS           Map of metadata to add on OMERO, in the specified namespace
      */
     private ImageCompanion(Image image,
                            String name,
@@ -129,7 +134,7 @@ public class ImageCompanion {
      * Transform the current imageCompanion into an Image object,
      * compatible with a companion.ome file
      *
-     * @return
+     * @return the Image object
      */
     protected Image createImage(){
         Image image;

@@ -154,6 +154,12 @@ public class CompanionFileGenerator {
 
     }
 
+    /**
+     * Set the plate object under which well and images are linked
+     *
+     * @param plateCompanion
+     * @return the plate ID
+     */
     public String setPlate(PlateCompanion plateCompanion){
         String id = "Plate:"+plateIndex++;
         Plate plate = plateCompanion.createPlate();
@@ -162,6 +168,12 @@ public class CompanionFileGenerator {
         return id;
     }
 
+    /**
+     * Add a new well object under which some images are linked
+     *
+     * @param wellCompanion
+     * @return the well iD
+     */
     public String addWell(WellCompanion wellCompanion){
         String id = "Well:"+wellIndex++;
         Well well = wellCompanion.createWell();
@@ -170,6 +182,14 @@ public class CompanionFileGenerator {
         return id;
     }
 
+    /**
+     * Create a plate Acquisition object linked to the current plate.
+     * The current plate has to be set first. So, we need to call {@link CompanionFileGenerator#setPlate(PlateCompanion)}
+     * before calling this method.
+     *
+     * @param plateAcquisitionName
+     * @return the plate acquisition ID
+     */
     public String createPlateAcquisition(String plateAcquisitionName){
         if(finalPlate == null)
             throw new RuntimeException("You first need to set the plate by calling setPlate() method");
@@ -187,6 +207,14 @@ public class CompanionFileGenerator {
         return id;
     }
 
+    /**
+     * Add a new Image object, linked to a certain well and a certain plate acquisition.
+     *
+     * @param imageCompanion
+     * @param wellId
+     * @param plateAcquisitionId
+     * @return the image ID
+     */
     public String addImage(ImageCompanion imageCompanion, String wellId, String plateAcquisitionId){
         String id = "Image:"+imageIndex++;
         Image image = imageCompanion.createImage();
@@ -205,6 +233,12 @@ public class CompanionFileGenerator {
         return id;
     }
 
+    /**
+     * Set the instrument object related to the acquisition
+     *
+     * @param instrument
+     * @return the instrument ID
+     */
     public String setInstrument(Instrument instrument){
         String id = "Instrument:"+instrumentIndex++;
         instrument.setID(id);
@@ -215,10 +249,12 @@ public class CompanionFileGenerator {
     /**
      * read images & metadata, build a companion.ome file and save in the image folder.
      *
-     * @param parentPath
+     * @param parentPath path to the destination folder
+     * @param filename name of the companion.ome file
+     *
      * @throws Exception
      */
-    public void buildCompanionFromImageFolder(String parentPath, String filename) throws Exception{
+    public void buildCompanionFromImageFolder(String parentPath, String filename) throws Exception {
 
         // generate OME-XML metadata file
         build();
@@ -242,7 +278,6 @@ public class CompanionFileGenerator {
 
     /**
      * create the full XML metadata (plate, images, channels, annotations....)
-     *
      */
     private void build() {
         // create a new OME-XML metadata instance
@@ -274,7 +309,6 @@ public class CompanionFileGenerator {
             ome.addImage(makeImage(image, instrument, kvps, tags));
         }
 
-
         // add annotation nodes
         ome.setStructuredAnnotations(annotations);
     }
@@ -282,7 +316,11 @@ public class CompanionFileGenerator {
     /**
      * create an image xml-element, populated with annotations, channel, pixels and path elements
      *
-     * @return an image xml-element
+     * @param image the Image object to convert
+     * @param instrument the Instrument object used to acquire the image
+     * @param keyValues the list of KVPs to link to the current image
+     * @param tags the list of tags to link to the current image
+     * @return Image xml-element
      */
     private Image makeImage(Image image, Instrument instrument, List<MapAnnotation> keyValues, List<TagAnnotation> tags) {
         int currentSize = annotations.sizeOfTagAnnotationList();
@@ -308,6 +346,9 @@ public class CompanionFileGenerator {
 
     /**
      * create a Plate xml-element, populated with wells and their attributes
+     *
+     * @param plate the Plate object to convert
+     * @param plateId the plate id
      * @return Plate xml-element
      */
     private Plate makePlate(Plate plate, String plateId) {
@@ -359,6 +400,7 @@ public class CompanionFileGenerator {
      *
      * @param document
      * @return
+     *
      * @throws TransformerException
      * @throws UnsupportedEncodingException
      */

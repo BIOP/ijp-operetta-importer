@@ -887,14 +887,17 @@ public class OperettaManager {
         double percentageCompleteness;
 
         try {
-            Plate plate = getPlate();
+            // create the companion generator
             CompanionFileGenerator companionFileGenerator = new CompanionFileGenerator();
+
+            // get the global metadata, those which are displayed under the OriginalMetadata tab on OMERO
             Map<String, String> globalMetadataMap = this.main_reader.getGlobalMetadata()
                     .entrySet()
                     .stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, e->e.getValue().toString()));
 
-            // set the plate we are working on
+            // create the plate object
+            Plate plate = getPlate();
             PlateCompanion plateCompanion = new PlateCompanion.Builder()
                     .setName(getPlateName())
                     .setNRows(plate.getRows().getValue())
@@ -903,6 +906,9 @@ public class OperettaManager {
                     .setRowNamingConvention(plate.getRowNamingConvention())
                     .build();
             companionFileGenerator.setPlate(plateCompanion);
+
+            // create the plate acquisition object
+            // only one is created, as it is the default working way with Operetta dataset
             String plateAcquisitionId = companionFileGenerator.createPlateAcquisition(null);
 
             for (Well well : wells) {
@@ -976,8 +982,10 @@ public class OperettaManager {
 
                     if (well_image != null) {
                         if(this.save_as_ome_tiff) {
+                            // save the fused image as ome-tiff pyramidal file
                             saveAsOMETIFF(well_image, save_folder.getAbsolutePath());
 
+                            // load the calibration and other pixel/imagePlus information necessary to build the companion
                             PixelType pixelType;
                             switch (well_image.getType()) {
                                 case (ImagePlus.COLOR_RGB):
@@ -997,16 +1005,19 @@ public class OperettaManager {
 
                             Calibration cal = well_image.getCalibration();
 
+                            // create the well object
                             WellCompanion wellCompanion = new WellCompanion.Builder()
                                     .setRow(well.getRow().getValue())
                                     .setColumn(well.getColumn().getValue())
                                     .build();
                             String wellId = companionFileGenerator.addWell(wellCompanion);
 
-                            int serieId = well_fields.get(0).getIndex().getValue();
+                            // get and set the current instrument
                             Instrument instrument = getInstrument(0);
                             String instrumentId = companionFileGenerator.setInstrument(instrument);
 
+                            // create the image object
+                            int serieId = well_fields.get(0).getIndex().getValue();
                             ImageCompanion imageCompanion = new ImageCompanion.Builder()
                                     .setName(name + ".ome.tiff")
                                     .addGlobalMetadata(globalMetadataMap)
@@ -1037,11 +1048,11 @@ public class OperettaManager {
                 percentageCompleteness = (iWell.get() / (double) wells.size()) * 100;
                 utils.printTimingMessage(global_start, percentageCompleteness);
             }
+            // build and save the companion file
+            companionFileGenerator.buildCompanionFromImageFolder(save_folder.getAbsolutePath(), getPlateName());
 
             Instant global_ends = Instant.now();
             IJ.log(" DONE! All wells processed in " + (Duration.between(global_start, global_ends).getSeconds() / 60) + " min.");
-            //TODO change definition of method to get a File instead of a string
-            companionFileGenerator.buildCompanionFromImageFolder(save_folder.getAbsolutePath(), getPlateName());
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -1054,16 +1065,21 @@ public class OperettaManager {
         }
     }
 
+    /**
+     * convert the ImagePlus into OME-TIFF with kheops
+     *
+     * @param wellImage the imagePlus to convert
+     * @param savingPath destination folder path
+     */
+    private void saveAsOMETIFF(ImagePlus wellImage, String savingPath){
 
-    private void saveAsOMETIFF(ImagePlus well_image, String savingPath){
-        // convert image into OME-TIFF with kheops
        if (ctx ==  null) throw new RuntimeException("Scijava context not set, cannot save as ome tiff");
 
        CommandService cs = ctx.getService(CommandService.class);
 
         try {
             cs.run(KheopsExportImagePlusCommand.class, true,
-                    "image", well_image,
+                    "image", wellImage,
                     "output_dir", savingPath,
                     "compression", "LZW",
                     "subset_channels","",
@@ -1071,9 +1087,7 @@ public class OperettaManager {
                     "subset_frames","",
                     "message","",
                     "compress_temp_files",false).get();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
+        } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }

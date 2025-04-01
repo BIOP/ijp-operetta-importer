@@ -12,8 +12,9 @@ public class WellCompanion {
      * WellCompanion Constructor. This constructor is private as you need to use the Builder class
      * to generate the WellCompanion instance. {@link Builder}
      *
-     * @param row
-     * @param column
+     * @param well the Well object if there is one
+     * @param row the row index of the well
+     * @param column the column index of the well
      */
     private WellCompanion(Well well,
                           int row,
@@ -28,7 +29,7 @@ public class WellCompanion {
      * Transform the current wellCompanion into a Well object,
      * compatible with a companion.ome file
      *
-     * @return
+     * @return the Well object
      */
     protected Well createWell(){
         Well well;
