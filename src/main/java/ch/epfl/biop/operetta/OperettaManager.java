@@ -21,7 +21,11 @@
  */
 package ch.epfl.biop.operetta;
 
-import ch.epfl.biop.operetta.commands.OperettaImporter;
+import ch.epfl.biop.kheops.command.KheopsExportImagePlusCommand;
+import ch.epfl.biop.operetta.companion.CompanionFileGenerator;
+import ch.epfl.biop.operetta.companion.ImageCompanion;
+import ch.epfl.biop.operetta.companion.PlateCompanion;
+import ch.epfl.biop.operetta.companion.WellCompanion;
 import ch.epfl.biop.operetta.utils.HyperRange;
 import ij.IJ;
 import ij.ImagePlus;
@@ -51,9 +55,19 @@ import ome.units.quantity.Length;
 import ome.units.quantity.Time;
 import ome.xml.meta.MetadataRetrieve;
 import ome.xml.meta.OMEXMLMetadataRoot;
+import ome.xml.model.Channel;
+import ome.xml.model.Instrument;
+import ome.xml.model.ObjectiveSettings;
+import ome.xml.model.Plate;
 import ome.xml.model.Well;
 import ome.xml.model.WellSample;
+import ome.xml.model.enums.DimensionOrder;
+import ome.xml.model.enums.PixelType;
+import ome.xml.model.primitives.Timestamp;
+import org.apache.commons.io.FilenameUtils;
 import org.perf4j.StopWatch;
+import org.scijava.Context;
+import org.scijava.command.CommandService;
 import org.scijava.task.Task;
 import org.scijava.task.TaskService;
 import org.slf4j.Logger;
@@ -102,10 +116,12 @@ public class OperettaManager {
     private final int downsample;
     private final boolean fuse_fields;
     private final boolean use_stitcher;
+    private final boolean save_as_ome_tiff;
     private StitchingParameters stitching_parameters;
     private final Utilities utils;
     private final TaskService taskService; // Task monitoring and cancellation
     private final boolean use_averaging;
+    private final Context ctx;
 
     /**
      * List the types of valid XML files we should be looking for
@@ -160,8 +176,9 @@ public class OperettaManager {
                             double correction_factor,
                             boolean fuse_fields,
                             boolean use_stitcher,
+                            boolean save_as_ome_tiff,
                             StitchingParameters stitching_parameters,
-                            TaskService taskService) {
+                            Context ctx) {
 
         this.id = new File(reader.getCurrentFile());
         this.main_reader = reader;
@@ -181,10 +198,17 @@ public class OperettaManager {
 
         this.fuse_fields = fuse_fields;
         this.use_stitcher = use_stitcher;
+        this.save_as_ome_tiff = save_as_ome_tiff;
         this.stitching_parameters = stitching_parameters;
         this.px_size = metadata.getPixelsPhysicalSizeX(0);
         this.utils = new Utilities();
-        this.taskService = taskService;
+
+        if (save_as_ome_tiff && ctx ==  null) {
+            throw new RuntimeException("Scijava context not set, cannot save as ome tiff");
+        }
+
+        this.ctx = ctx;
+        this.taskService = ctx == null ? null : ctx.getService(TaskService.class);
     }
 
     /**
@@ -212,6 +236,12 @@ public class OperettaManager {
      */
     public HyperRange getRange() {
         return this.range;
+    }
+
+
+    public Plate getPlate(){
+        OMEXMLMetadataRoot r = (OMEXMLMetadataRoot) metadata.getRoot();
+        return r.getPlate(0);
     }
 
     /**
@@ -729,6 +759,34 @@ public class OperettaManager {
         return result;
     }
 
+    public List<Channel> getChannels(int fieldIndex, List<Integer> channels){
+        List<Channel> chList = new ArrayList<>();
+        List<Channel> originalChannels = ((OMEXMLMetadataRoot) metadata.getRoot())
+                .getImage(fieldIndex)
+                .getPixels()
+                .copyChannelList();
+        for(int chId : channels){
+            chList.add(originalChannels.get(chId-1));
+        }
+        return chList;
+    }
+
+    public ObjectiveSettings getObjectiveSettings(int fieldIndex){
+        return ((OMEXMLMetadataRoot)metadata.getRoot()).getImage(fieldIndex).getObjectiveSettings();
+    }
+
+    public Instrument getInstrument(int fieldIndex){
+        return ((OMEXMLMetadataRoot)metadata.getRoot()).getInstrument(fieldIndex);
+    }
+
+    public Timestamp getAcquisitionDate(int fieldIndex){
+        return ((OMEXMLMetadataRoot)metadata.getRoot()).getImage(fieldIndex).getAcquisitionDate();
+    }
+
+    public DimensionOrder getDimensionOrder(int fieldIndex){
+        return ((OMEXMLMetadataRoot)metadata.getRoot()).getImage(fieldIndex).getPixels().getDimensionOrder();
+    }
+
     /**
      * Internal single tiff plane reader. We assume all tiff images are single
      * plane images that can be 8, 16 or 32 bits.
@@ -839,6 +897,36 @@ public class OperettaManager {
         double percentageCompleteness;
 
         try {
+            CompanionFileGenerator companionFileGenerator = null;
+            Map<String, String> globalMetadataMap = new HashMap<>();
+            String plateAcquisitionId = "";
+
+            if(this.save_as_ome_tiff) {
+                // create the companion generator
+                companionFileGenerator = new CompanionFileGenerator();
+
+                // get the global metadata, those which are displayed under the OriginalMetadata tab on OMERO
+                globalMetadataMap = this.main_reader.getGlobalMetadata()
+                        .entrySet()
+                        .stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString()));
+
+                // create the plate object
+                Plate plate = getPlate();
+                PlateCompanion plateCompanion = new PlateCompanion.Builder()
+                        .setName(getPlateName())
+                        .setNRows(plate.getRows().getValue())
+                        .setNColumns(plate.getColumns().getValue())
+                        .setColumnNamingConvention(plate.getColumnNamingConvention())
+                        .setRowNamingConvention(plate.getRowNamingConvention())
+                        .build();
+                companionFileGenerator.setPlate(plateCompanion);
+
+                // create the plate acquisition object
+                // only one is created, as it is the default working way with Operetta dataset
+                plateAcquisitionId = companionFileGenerator.createPlateAcquisition(null);
+            }
+
             for (Well well : wells) {
                 if (taskWell != null) {
                     if (taskWell.isCanceled()) {
@@ -906,9 +994,68 @@ public class OperettaManager {
                 } else {
                     // Need to give all the fields, otherwise we will get the origin wrong
                     ImagePlus well_image = this.getWellImage(well, well_fields, region);
-                    String name = getWellImageName(well);
+                    String name = FilenameUtils.removeExtension(getWellImageName(well));
+
                     if (well_image != null) {
-                        IJ.saveAsTiff(well_image, new File(save_folder, name + ".tif").getAbsolutePath());
+                        if(this.save_as_ome_tiff) {
+                            // save the fused image as ome-tiff pyramidal file
+                            saveAsOMETIFF(well_image, save_folder.getAbsolutePath());
+
+                            // load the calibration and other pixel/imagePlus information necessary to build the companion
+                            PixelType pixelType;
+                            switch (well_image.getType()) {
+                                case (ImagePlus.COLOR_RGB):
+                                case (ImagePlus.COLOR_256):
+                                case (ImagePlus.GRAY8):
+                                    pixelType = PixelType.UINT8;
+                                    break;
+                                case (ImagePlus.GRAY16):
+                                    pixelType = PixelType.UINT16;
+                                    break;
+                                case (ImagePlus.GRAY32):
+                                    pixelType = PixelType.FLOAT;
+                                    break;
+                                default:
+                                    throw new IllegalArgumentException("Unknown ImagePlus type " + well_image.getType());
+                            }
+
+                            Calibration cal = well_image.getCalibration();
+
+                            // create the well object
+                            WellCompanion wellCompanion = new WellCompanion.Builder()
+                                    .setRow(well.getRow().getValue())
+                                    .setColumn(well.getColumn().getValue())
+                                    .build();
+                            String wellId = companionFileGenerator.addWell(wellCompanion);
+
+                            // get and set the current instrument
+                            Instrument instrument = getInstrument(0);
+                            String instrumentId = companionFileGenerator.setInstrument(instrument);
+
+                            // create the image object
+                            int serieId = well_fields.get(0).getIndex().getValue();
+                            ImageCompanion imageCompanion = new ImageCompanion.Builder()
+                                    .setName(name + ".ome.tiff")
+                                    .addGlobalMetadata(globalMetadataMap)
+                                    .setPixelSizeX(new Length(cal.pixelWidth, UNITS.MICROMETER))
+                                    .setPixelSizeY(new Length(cal.pixelHeight, UNITS.MICROMETER))
+                                    .setDimensionOrder(getDimensionOrder(serieId))
+                                    .setPixelType(pixelType)
+                                    .setSizeC(well_image.getNChannels())
+                                    .addChannels(getChannels(serieId, this.range.getRangeC()))
+                                    .setSizeT(well_image.getNFrames())
+                                    .setSizeZ(well_image.getNSlices())
+                                    .setSizeY(well_image.getHeight())
+                                    .setSizeX(well_image.getWidth())
+                                    .setObjectiveSettings(getObjectiveSettings(serieId))
+                                    .setInstrument(instrument)
+                                    .setAcquisitionDate(getAcquisitionDate(serieId))
+                                    .build();
+                            companionFileGenerator.addImage(imageCompanion, wellId, plateAcquisitionId);
+                        }
+                        else {
+                            IJ.saveAsTiff(well_image, new File(save_folder, name + ".tif").getAbsolutePath());
+                        }
                     }
                 }
                 Instant ends = Instant.now();
@@ -919,8 +1066,15 @@ public class OperettaManager {
                 utils.printTimingMessage(global_start, percentageCompleteness);
             }
 
+            if(save_as_ome_tiff && companionFileGenerator != null) {
+                // build and save the companion file
+                companionFileGenerator.buildCompanionFromImageFolder(save_folder.getAbsolutePath(), getPlateName());
+            }
+
             Instant global_ends = Instant.now();
             IJ.log(" DONE! All wells processed in " + (Duration.between(global_start, global_ends).getSeconds() / 60) + " min.");
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             if (taskWell != null) {
                 taskWell.finish();
@@ -931,6 +1085,34 @@ public class OperettaManager {
         }
     }
 
+    /**
+     * convert the ImagePlus into OME-TIFF with kheops
+     *
+     * @param wellImage the imagePlus to convert
+     * @param savingPath destination folder path
+     */
+    private void saveAsOMETIFF(ImagePlus wellImage, String savingPath){
+
+       if (ctx ==  null){
+           throw new RuntimeException("Scijava context not set, cannot save as ome tiff");
+       }
+
+       CommandService cs = ctx.getService(CommandService.class);
+
+        try {
+            cs.run(KheopsExportImagePlusCommand.class, true,
+                    "image", wellImage,
+                    "output_dir", savingPath,
+                    "compression", "LZW",
+                    "subset_channels","",
+                    "subset_slices","",
+                    "subset_frames","",
+                    "message","",
+                    "compress_temp_files",false).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @Override
     public String toString() {
@@ -1142,8 +1324,11 @@ public class OperettaManager {
         private int downsample = 1;
         private boolean is_fuse_fields = false;
         private boolean is_use_stitcher = false;
+        private boolean save_as_ome_tiff = false;
         private StitchingParameters stitching_parameters = null;
         private boolean use_averaging = false;
+
+        private Context ctx = null;
 
         public Builder setStitchingParameters(StitchingParameters stitching_parameters) {
             this.stitching_parameters = stitching_parameters;
@@ -1161,6 +1346,16 @@ public class OperettaManager {
         public Builder useStitcher( boolean is_use_stitcher) {
             this.is_use_stitcher = is_use_stitcher;
             if (is_use_stitcher)  this.is_fuse_fields = true;
+            return this;
+        }
+
+        public Builder setContext(Context ctx) {
+            this.ctx = ctx;
+            return this;
+        }
+
+        public Builder saveAsOMETIFF( boolean save_as_ome_tiff) {
+            this.save_as_ome_tiff = save_as_ome_tiff;
             return this;
         }
 
@@ -1316,17 +1511,6 @@ public class OperettaManager {
         }
 
         /**
-         * Optional: adds a way to monitor the progression of a process using scijava TaskService
-         *
-         * @param taskService a service that monitors the progression of a process
-         * @return this Builder, to continue building options
-         */
-        public Builder setTaskService(TaskService taskService) {
-            this.taskService = taskService;
-            return this;
-        }
-
-        /**
          * The build method handles creating an {@link OperettaManager} object from all the settings that were provided.
          * This is done so that everything, like the {@link HyperRange} that is defined is valid.
          *
@@ -1400,8 +1584,9 @@ public class OperettaManager {
                         this.correction_factor,
                         this.is_fuse_fields,
                         this.is_use_stitcher,
+                        this.save_as_ome_tiff,
                         this.stitching_parameters,
-                        this.taskService);
+                        this.ctx);
         }
 
         /**

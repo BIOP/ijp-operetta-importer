@@ -74,6 +74,11 @@
 			<url>https://www.camilod.ca/the-team</url>
 			<properties><id>JoaoFirmino</id></properties>
 		</contributor>
+		<contributor>
+			<name>Rémy Dornier</name>
+			<url>http://biop.epfl.ch</url>
+			<properties><id>Rdornier</id></properties>
+		</contributor>
 	</contributors>
 
 	<mailingLists>
@@ -109,6 +114,8 @@
 		<license.excludes>**/resources/**</license.excludes>
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
+
+		<ijp-kheops.version>0.6.2</ijp-kheops.version>
 	</properties>
 
 	<dependencies>
@@ -139,6 +146,17 @@
 			<groupId>sc.fiji</groupId>
 			<artifactId>Stitching_</artifactId>
 			<version>3.1.9</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.epfl.biop</groupId>
+			<artifactId>ijp-kheops</artifactId>
+			<version>${ijp-kheops.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId> ch.qos.logback</groupId>
+					<artifactId>logback-classic</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 	</dependencies>
 </project>
