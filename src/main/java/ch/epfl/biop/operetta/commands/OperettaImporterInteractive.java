@@ -224,6 +224,26 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
             double correctionFactor = Prefs.get(OperettaImporterHiddenSettings.correction_factor_key, 0.995);
 
+            if (flip_mode == null) {
+                flip_mode = FLIP_MODE.NONE;
+            }
+
+            if (z_projection_method == null) {
+                z_projection_method = "Max Intensity";
+            }
+
+            if (norm_min == null) {
+                norm_min = 0;
+            }
+
+            if (norm_max == null) {
+                norm_max = 65535;
+            }
+
+            if (fuse_mode == null) {
+                fuse_mode = FUSE_MODE.NONE;
+            }
+
             opm = opm_builder
                     .setRange(range)
                     .setDownsample(downsample)
@@ -272,6 +292,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
         } catch (Exception e) {
             task_summary = "Error " + e.getMessage();
+            e.printStackTrace();
         }
 
     }
