@@ -203,10 +203,12 @@ public class OperettaManager {
         this.px_size = metadata.getPixelsPhysicalSizeX(0);
         this.utils = new Utilities();
 
-        if (ctx ==  null) throw new RuntimeException("Scijava context not set, cannot save as ome tiff");
+        if (save_as_ome_tiff && ctx ==  null) {
+            throw new RuntimeException("Scijava context not set, cannot save as ome tiff");
+        }
 
         this.ctx = ctx;
-        this.taskService = ctx.getService(TaskService.class);
+        this.taskService = ctx == null ? null : ctx.getService(TaskService.class);
     }
 
     /**
