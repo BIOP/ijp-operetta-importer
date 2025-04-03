@@ -895,29 +895,35 @@ public class OperettaManager {
         double percentageCompleteness;
 
         try {
-            // create the companion generator
-            CompanionFileGenerator companionFileGenerator = new CompanionFileGenerator();
+            CompanionFileGenerator companionFileGenerator = null;
+            Map<String, String> globalMetadataMap = new HashMap<>();
+            String plateAcquisitionId = "";
 
-            // get the global metadata, those which are displayed under the OriginalMetadata tab on OMERO
-            Map<String, String> globalMetadataMap = this.main_reader.getGlobalMetadata()
-                    .entrySet()
-                    .stream()
-                    .collect(Collectors.toMap(Map.Entry::getKey, e->e.getValue().toString()));
+            if(this.save_as_ome_tiff) {
+                // create the companion generator
+                companionFileGenerator = new CompanionFileGenerator();
 
-            // create the plate object
-            Plate plate = getPlate();
-            PlateCompanion plateCompanion = new PlateCompanion.Builder()
-                    .setName(getPlateName())
-                    .setNRows(plate.getRows().getValue())
-                    .setNColumns(plate.getColumns().getValue())
-                    .setColumnNamingConvention(plate.getColumnNamingConvention())
-                    .setRowNamingConvention(plate.getRowNamingConvention())
-                    .build();
-            companionFileGenerator.setPlate(plateCompanion);
+                // get the global metadata, those which are displayed under the OriginalMetadata tab on OMERO
+                globalMetadataMap = this.main_reader.getGlobalMetadata()
+                        .entrySet()
+                        .stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString()));
 
-            // create the plate acquisition object
-            // only one is created, as it is the default working way with Operetta dataset
-            String plateAcquisitionId = companionFileGenerator.createPlateAcquisition(null);
+                // create the plate object
+                Plate plate = getPlate();
+                PlateCompanion plateCompanion = new PlateCompanion.Builder()
+                        .setName(getPlateName())
+                        .setNRows(plate.getRows().getValue())
+                        .setNColumns(plate.getColumns().getValue())
+                        .setColumnNamingConvention(plate.getColumnNamingConvention())
+                        .setRowNamingConvention(plate.getRowNamingConvention())
+                        .build();
+                companionFileGenerator.setPlate(plateCompanion);
+
+                // create the plate acquisition object
+                // only one is created, as it is the default working way with Operetta dataset
+                plateAcquisitionId = companionFileGenerator.createPlateAcquisition(null);
+            }
 
             for (Well well : wells) {
                 if (taskWell != null) {
@@ -1057,8 +1063,11 @@ public class OperettaManager {
                 percentageCompleteness = (iWell.get() / (double) wells.size()) * 100;
                 utils.printTimingMessage(global_start, percentageCompleteness);
             }
-            // build and save the companion file
-            companionFileGenerator.buildCompanionFromImageFolder(save_folder.getAbsolutePath(), getPlateName());
+
+            if(save_as_ome_tiff && companionFileGenerator != null) {
+                // build and save the companion file
+                companionFileGenerator.buildCompanionFromImageFolder(save_folder.getAbsolutePath(), getPlateName());
+            }
 
             Instant global_ends = Instant.now();
             IJ.log(" DONE! All wells processed in " + (Duration.between(global_start, global_ends).getSeconds() / 60) + " min.");
