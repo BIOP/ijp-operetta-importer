@@ -1045,8 +1045,9 @@ public class OperettaManager {
                                     .build();
                             companionFileGenerator.addImage(imageCompanion, wellId, plateAcquisitionId);
                         }
-                        else
+                        else {
                             IJ.saveAsTiff(well_image, new File(save_folder, name + ".tif").getAbsolutePath());
+                        }
                     }
                 }
                 Instant ends = Instant.now();
@@ -1081,7 +1082,9 @@ public class OperettaManager {
      */
     private void saveAsOMETIFF(ImagePlus wellImage, String savingPath){
 
-       if (ctx ==  null) throw new RuntimeException("Scijava context not set, cannot save as ome tiff");
+       if (ctx ==  null){
+           throw new RuntimeException("Scijava context not set, cannot save as ome tiff");
+       }
 
        CommandService cs = ctx.getService(CommandService.class);
 

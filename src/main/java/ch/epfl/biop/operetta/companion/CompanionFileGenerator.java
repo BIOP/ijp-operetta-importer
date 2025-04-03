@@ -191,8 +191,9 @@ public class CompanionFileGenerator {
      * @return the plate acquisition ID
      */
     public String createPlateAcquisition(String plateAcquisitionName){
-        if(finalPlate == null)
+        if(finalPlate == null) {
             throw new RuntimeException("You first need to set the plate by calling setPlate() method");
+        }
 
         String id = "PlateAcquisition:"+ plateAcquisitionIndex++;
         PlateAcquisition plateAcquisition = new PlateAcquisition();
@@ -226,10 +227,12 @@ public class CompanionFileGenerator {
         // create tags and key-value pairs
         List<MapAnnotation> keyValues = imageCompanion.createMapAnnotations();
         List<TagAnnotation> tags = imageCompanion.createTagAnnotations();
-        if(keyValues != null && !keyValues.isEmpty())
+        if(keyValues != null && !keyValues.isEmpty()) {
             imageKVPsMap.put(id, keyValues);
-        if(tags != null && !tags.isEmpty())
+        }
+        if(tags != null && !tags.isEmpty()) {
             imageTagsMap.put(id, tags);
+        }
         return id;
     }
 
@@ -286,24 +289,28 @@ public class CompanionFileGenerator {
         // create a new structured annotation node (for key-values, tags...)
         annotations = new StructuredAnnotations();
 
-        if(instrument != null)
+        if(instrument != null) {
             ome.addInstrument(instrument);
+        }
 
         // create Plate node
-        if(finalPlate == null)
+        if(finalPlate == null) {
             throw new RuntimeException("You first need to set the plate by calling setPlate() method");
+        }
         ome.addPlate(makePlate(finalPlate, finalPlate.getID()));
 
         for (String imageId : imageMap.keySet()) {
             Image image = imageMap.get(imageId);
 
             List<MapAnnotation> kvps = new ArrayList<>();
-            if(imageKVPsMap.containsKey(imageId))
+            if(imageKVPsMap.containsKey(imageId)) {
                 kvps = imageKVPsMap.get(imageId);
+            }
 
             List<TagAnnotation> tags = new ArrayList<>();
-            if(imageTagsMap.containsKey(imageId))
+            if(imageTagsMap.containsKey(imageId)) {
                 tags = imageTagsMap.get(imageId);
+            }
 
             // create an Image node in the ome-xml
             ome.addImage(makeImage(image, instrument, kvps, tags));
@@ -337,8 +344,9 @@ public class CompanionFileGenerator {
             image.linkAnnotation(mapAnnotation);
         }
 
-        if(instrument != null)
+        if(instrument != null) {
             image.linkInstrument(instrument);
+        }
 
         return image;
     }

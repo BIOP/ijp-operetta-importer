@@ -143,28 +143,36 @@ public class ImageCompanion {
         }else{
             image = new Image();
             image.setName(this.name);
-            if(this.description != null)
+            if(this.description != null) {
                 image.setDescription(this.description);
+            }
             if(!this.globalMetadata.isEmpty()){
                 String metadata = "";
                 for (String key: this.globalMetadata.keySet()){
                     metadata += "\n"+key+": "+this.globalMetadata.get(key);
                 }
-                if(this.description != null)
+                if(this.description != null) {
                     image.setDescription(this.description + "\n" + metadata);
-                else
+                }
+                else {
                     image.setDescription(metadata);
+                }
             }
-            if(this.acquisitionDate != null)
+            if(this.acquisitionDate != null) {
                 image.setAcquisitionDate(this.acquisitionDate);
-            if(this.objectiveSettings != null)
+            }
+            if(this.objectiveSettings != null) {
                 image.setObjectiveSettings(this.objectiveSettings);
-            if(this.imagingEnvironment != null)
+            }
+            if(this.imagingEnvironment != null) {
                 image.setImagingEnvironment(this.imagingEnvironment);
-            if(this.stageLabel != null)
+            }
+            if(this.stageLabel != null) {
                 image.setStageLabel(this.stageLabel);
-            if(this.instrument != null)
+            }
+            if(this.instrument != null) {
                 image.linkInstrument(this.instrument);
+            }
             if(this.sizeX > 0 && this.sizeC > 0 && this.sizeT > 0 && this.sizeY > 0 && this.sizeZ > 0 &&
                     this.pixelSizeX != null && this.pixelSizeY != null && this.dimensionOrder != null &&
                     this.pixelType != null){
@@ -204,11 +212,13 @@ public class ImageCompanion {
                         channel.setID("Channel:" + i);
 
                         // Create <LightSourceSettings/> and link to <Channel/>
-                        if (this.lightSourceSettings != null)
+                        if (this.lightSourceSettings != null) {
                             channel.setLightSourceSettings(this.lightSourceSettings);
+                        }
 
-                        if (this.lightPath != null)
+                        if (this.lightPath != null) {
                             channel.setLightPath(this.lightPath);
+                        }
 
                         pixels.addChannel(channel);
                     }
@@ -222,7 +232,6 @@ public class ImageCompanion {
                 image.setPixels(pixels);
             }
         }
-
         return image;
     }
 
