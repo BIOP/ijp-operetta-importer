@@ -151,6 +151,12 @@
 			<groupId>ch.epfl.biop</groupId>
 			<artifactId>ijp-kheops</artifactId>
 			<version>${ijp-kheops.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId> ch.qos.logback</groupId>
+					<artifactId>logback-classic</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 	</dependencies>
 </project>
