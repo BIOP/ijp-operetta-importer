@@ -36,7 +36,6 @@ import org.scijava.command.Command;
 import org.scijava.command.InteractiveCommand;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.task.TaskService;
 import org.scijava.widget.Button;
 import org.scijava.widget.FileWidget;
 
@@ -124,7 +123,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     private Button choose_fields;
     @Parameter(label = "Fuse Fields", callback = "updateMessage", required = false)
     private FUSE_MODE fuse_mode = FUSE_MODE.NONE;
-    @Parameter(label = "Save as OME-TIFF", callback = "updateMessage", required = false)
+    @Parameter(label = "Save as OME-TIFF & companion.ome", callback = "updateMessage", required = false)
     private boolean save_as_ome_tiff = false;
     @Parameter(label = "Preview Well slice", callback = "previewWell", required = false, persist = false)
     private Button open_slice;

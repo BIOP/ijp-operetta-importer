@@ -250,7 +250,7 @@ public class CompanionFileGenerator {
     }
 
     /**
-     * read images & metadata, build a companion.ome file and save in the image folder.
+     * read images and metadata, build a companion.ome file and save in the image folder.
      *
      * @param parentPath path to the destination folder
      * @param filename name of the companion.ome file
