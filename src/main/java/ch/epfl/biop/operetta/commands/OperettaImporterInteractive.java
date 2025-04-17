@@ -104,52 +104,74 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         final boolean stitch_fields;
     }
 
-    @Parameter(label = "Downsample factor", callback = "updateMessage")
-    int downsample = 4;
-
-    @Parameter(label = "Use averaging when downsampling", callback = "updateMessage")
-    boolean use_averaging = false;
-
-    @Parameter(label = "Save directory", style = FileWidget.DIRECTORY_STYLE)
-    File save_directory = new File(System.getProperty("user.home") + File.separator);
+    @Parameter(label = "<html><b>Input data<b/><html>", visibility = ItemVisibility.MESSAGE, persist = false, style = "message", required = false)
+    String inputDataMsg = "";
 
     @Parameter(label = "Selected Wells. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_wells_str = "";
+
     @Parameter(label = "Choose Wells", callback = "wellChooser", required = false, persist = false)
     private Button choose_wells;
+
     @Parameter(label = "Selected Fields. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_fields_str = "";
+
     @Parameter(label = "Choose Fields", callback = "fieldChooser", required = false, persist = false)
     private Button choose_fields;
-    @Parameter(label = "Fuse Fields", callback = "updateMessage", required = false)
-    private FUSE_MODE fuse_mode = FUSE_MODE.NONE;
-    @Parameter(label = "Save as OME-TIFF & companion.ome", callback = "updateMessage", required = false)
-    private boolean save_as_ome_tiff = false;
+
     @Parameter(label = "Preview Well slice", callback = "previewWell", required = false, persist = false)
     private Button open_slice;
-
-    @Parameter(label = "Flip images", callback = "updateMessage", required = false)
-    private FLIP_MODE flip_mode = FLIP_MODE.NONE;
 
     @Parameter(label = "Select ranges", callback = "updateMessage", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String range = "You can use commas or colons to separate ranges. eg. '1:10' or '1,3,5,8' ";
 
     @Parameter(label = "Select channels. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_channels_str = "";
+
     @Parameter(label = "Select slices. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_slices_str = "";
+
     @Parameter(label = "Select timepoints. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_timepoints_str = "";
+
+
+    @Parameter(label = "<html><b>Processing<b/><html>", visibility = ItemVisibility.MESSAGE, persist = false, style = "message", required = false)
+    String processingMsg = "";
+
+    @Parameter(label = "Downsample factor", callback = "updateMessage")
+    int downsample = 4;
+
+    @Parameter(label = "Use averaging when downsampling", callback = "updateMessage")
+    boolean use_averaging = false;
+
+    @Parameter(label = "Fuse Fields", callback = "updateMessage", required = false)
+    private FUSE_MODE fuse_mode = FUSE_MODE.NONE;
+
+    @Parameter(label = "Flip images", callback = "updateMessage", required = false)
+    private FLIP_MODE flip_mode = FLIP_MODE.NONE;
 
     @Parameter(label = "Perform projection", choices = {"No Projection", "Average Intensity", "Max Intensity", "Min Intensity", "Sum Slices", "Standard Deviation", "Median"}, callback = "updateMessage")
     String z_projection_method;
 
     @Parameter(label = "Choose pixel data range", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String norm = "Useful if you have digital phase images which could be 32-bit";
+
     @Parameter(label = "Min Value")
     Integer norm_min = 0;
+
     @Parameter(label = "Max Value")
     Integer norm_max = (int) Math.pow(2, 16) - 1;
+
+
+    @Parameter(label = "<html><b>Output and saving<b/><html>", visibility = ItemVisibility.MESSAGE, persist = false, style = "message", required = false)
+    String outputMsg = "";
+
+    @Parameter(label = "Save directory", style = FileWidget.DIRECTORY_STYLE)
+    File save_directory = new File(System.getProperty("user.home") + File.separator);
+
+    @Parameter(label = "Save OME-TIFF fused fields & companion.ome", callback = "updateMessage", required = false)
+    private boolean save_as_ome_tiff = false;
+
 
     @Parameter(visibility = ItemVisibility.MESSAGE, persist = false, style = "message")
     String task_summary = "Summary";
