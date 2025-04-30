@@ -169,7 +169,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     @Parameter(label = "Save directory", style = FileWidget.DIRECTORY_STYLE)
     File save_directory = new File(System.getProperty("user.home") + File.separator);
 
-    @Parameter(label = "Save OME-TIFF fused fields & companion.ome", callback = "updateMessage", required = false)
+    @Parameter(label = "Save OME-TIFF fused fields & companion.ome", callback = "updateMessage", persist = false, required = false)
     private boolean save_as_ome_tiff = false;
 
 
@@ -182,7 +182,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     @Parameter
     Context ctx;
 
-    private String getMessage(long bytes_in, long bytes_out, String name, String oriSize, String exportSize) {
+    private String getMessage(long bytes_in, long bytes_out, String name, String oriSize, String exportSize, String warningOMETiff) {
         DecimalFormat df = new DecimalFormat("#0.0");
 
         double gb_in = ((double) bytes_in) / (1024 * 1024 * 1024);
@@ -192,6 +192,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
 
         String message = "<html>"// Process task: <br/>"
+                + warningOMETiff + "<br/>"
                 + oriSize + "<br/>"
                 + exportSize + "<br/>"
                 + "Operetta Dataset " + name + "<ul>";
@@ -238,8 +239,6 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
     private void updateMessage() {
         try {
-
-
             HyperRange range = new HyperRange.Builder()
                     .setRangeC(this.selected_channels_str)
                     .setRangeZ(this.selected_slices_str)
@@ -310,10 +309,13 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
             long[] dimsIO = opm.getUtilities().getIODimensions();
 
+            String warningOmeTiff = "";
+            if(this.save_as_ome_tiff && !this.fuse_mode.fuse_fields)
+                warningOmeTiff = "<font color=Red>WARNING: <strong>Saving as OME-TIFF + companion</strong> is only <br> supported with a <strong>fusing</strong> option</font>";
             String oriSize = "<strong>Original Size</strong>: W: " + oriWellsNumber + ", F:" + oriFieldsNumber + ", X:" + dimsIO[0] + ", Y:" + dimsIO[1] + ", Z:" + dimsIO[2] + ", C:" + dimsIO[3] + ", T:" + dimsIO[4];
             String exportSize = "<strong>Exported Size</strong>: W: " + selected_wells.size() + ", F:" + selected_fields.size() + ", X:" + dimsIO[5] + ", Y:" + dimsIO[6] + ", Z:" + dimsIO[7] + ", C:" + dimsIO[8] + ", T:" + dimsIO[9];
 
-            task_summary = getMessage(bytes[0], bytes[1], opm.getPlateName(), oriSize, exportSize);
+            task_summary = getMessage(bytes[0], bytes[1], opm.getPlateName(), oriSize, exportSize, warningOmeTiff);
 
         } catch (Exception e) {
             task_summary = "Error " + e.getMessage();
@@ -428,6 +430,12 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
      * Run the processing after pressing on the "Process" button
      */
     public void doProcess() {
+        if(this.save_as_ome_tiff && !this.fuse_mode.fuse_fields){
+            IJ.log( "WARNING: Saving as OME-TIFF + companion is only" +
+                    " supported with a fusing option.\nPlease select a fusing fields method.");
+            return;
+        }
+
         HyperRange range = new HyperRange.Builder()
                 .setRangeC(this.selected_channels_str)
                 .setRangeZ(this.selected_slices_str)
@@ -442,6 +450,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
                 .useAveraging(use_averaging)
                 .setProjectionMethod(this.z_projection_method)
                 .setSaveFolder(this.save_directory)
+                .saveAsOMETIFF(this.save_as_ome_tiff)
                 .setNormalization(norm_min, norm_max)
                 .coordinatesCorrectionFactor(correctionFactor)
                 .build();
