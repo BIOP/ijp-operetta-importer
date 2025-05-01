@@ -104,52 +104,74 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
         final boolean stitch_fields;
     }
 
-    @Parameter(label = "Downsample factor", callback = "updateMessage")
-    int downsample = 4;
-
-    @Parameter(label = "Use averaging when downsampling", callback = "updateMessage")
-    boolean use_averaging = false;
-
-    @Parameter(label = "Save directory", style = FileWidget.DIRECTORY_STYLE)
-    File save_directory = new File(System.getProperty("user.home") + File.separator);
+    @Parameter(label = "<html><b>Input data<b/><html>", visibility = ItemVisibility.MESSAGE, persist = false, style = "message", required = false)
+    String inputDataMsg = "";
 
     @Parameter(label = "Selected Wells. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_wells_str = "";
+
     @Parameter(label = "Choose Wells", callback = "wellChooser", required = false, persist = false)
     private Button choose_wells;
+
     @Parameter(label = "Selected Fields. Leave blank for all", callback = "updateMessage", required = false, persist = false)
     private String selected_fields_str = "";
+
     @Parameter(label = "Choose Fields", callback = "fieldChooser", required = false, persist = false)
     private Button choose_fields;
-    @Parameter(label = "Fuse Fields", callback = "updateMessage", required = false)
-    private FUSE_MODE fuse_mode = FUSE_MODE.NONE;
-    @Parameter(label = "Save as OME-TIFF & companion.ome", callback = "updateMessage", required = false)
-    private boolean save_as_ome_tiff = false;
+
     @Parameter(label = "Preview Well slice", callback = "previewWell", required = false, persist = false)
     private Button open_slice;
-
-    @Parameter(label = "Flip images", callback = "updateMessage", required = false)
-    private FLIP_MODE flip_mode = FLIP_MODE.NONE;
 
     @Parameter(label = "Select ranges", callback = "updateMessage", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String range = "You can use commas or colons to separate ranges. eg. '1:10' or '1,3,5,8' ";
 
     @Parameter(label = "Select channels. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_channels_str = "";
+
     @Parameter(label = "Select slices. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_slices_str = "";
+
     @Parameter(label = "Select timepoints. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_timepoints_str = "";
+
+
+    @Parameter(label = "<html><b>Processing<b/><html>", visibility = ItemVisibility.MESSAGE, persist = false, style = "message", required = false)
+    String processingMsg = "";
+
+    @Parameter(label = "Downsample factor", callback = "updateMessage")
+    int downsample = 4;
+
+    @Parameter(label = "Use averaging when downsampling", callback = "updateMessage")
+    boolean use_averaging = false;
+
+    @Parameter(label = "Fuse Fields", callback = "updateMessage", required = false)
+    private FUSE_MODE fuse_mode = FUSE_MODE.NONE;
+
+    @Parameter(label = "Flip images", callback = "updateMessage", required = false)
+    private FLIP_MODE flip_mode = FLIP_MODE.NONE;
 
     @Parameter(label = "Perform projection", choices = {"No Projection", "Average Intensity", "Max Intensity", "Min Intensity", "Sum Slices", "Standard Deviation", "Median"}, callback = "updateMessage")
     String z_projection_method;
 
     @Parameter(label = "Choose pixel data range", visibility = ItemVisibility.MESSAGE, persist = false, required = false)
     String norm = "Useful if you have digital phase images which could be 32-bit";
+
     @Parameter(label = "Min Value")
     Integer norm_min = 0;
+
     @Parameter(label = "Max Value")
     Integer norm_max = (int) Math.pow(2, 16) - 1;
+
+
+    @Parameter(label = "<html><b>Output and saving<b/><html>", visibility = ItemVisibility.MESSAGE, persist = false, style = "message", required = false)
+    String outputMsg = "";
+
+    @Parameter(label = "Save directory", style = FileWidget.DIRECTORY_STYLE)
+    File save_directory = new File(System.getProperty("user.home") + File.separator);
+
+    @Parameter(label = "Save OME-TIFF fused fields & companion.ome", callback = "updateMessage", persist = false, required = false)
+    private boolean save_as_ome_tiff = false;
+
 
     @Parameter(visibility = ItemVisibility.MESSAGE, persist = false, style = "message")
     String task_summary = "Summary";
@@ -160,7 +182,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     @Parameter
     Context ctx;
 
-    private String getMessage(long bytes_in, long bytes_out, String name, String oriSize, String exportSize) {
+    private String getMessage(long bytes_in, long bytes_out, String name, String oriSize, String exportSize, String warning) {
         DecimalFormat df = new DecimalFormat("#0.0");
 
         double gb_in = ((double) bytes_in) / (1024 * 1024 * 1024);
@@ -170,6 +192,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
 
         String message = "<html>"// Process task: <br/>"
+                + warning + "<br/>"
                 + oriSize + "<br/>"
                 + exportSize + "<br/>"
                 + "Operetta Dataset " + name + "<ul>";
@@ -216,8 +239,6 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
     private void updateMessage() {
         try {
-
-
             HyperRange range = new HyperRange.Builder()
                     .setRangeC(this.selected_channels_str)
                     .setRangeZ(this.selected_slices_str)
@@ -288,10 +309,36 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
             long[] dimsIO = opm.getUtilities().getIODimensions();
 
+            String warning = "";
+            if(this.save_as_ome_tiff && !this.fuse_mode.fuse_fields) {
+                warning = "<font color=Red>WARNING: <strong>Saving as OME-TIFF + companion</strong> is only <br> supported with a <strong>fusing</strong> option</font>";
+            }
+
+            for (Integer channel: range.getRangeC()) {
+                if ((channel<1) || (channel>dimsIO[3])) {
+                    warning += "<font color=Red>WARNING: Channel "+channel+" outside valid range [1:"+dimsIO[3]+"]</font><br>";
+                    break;
+                }
+            }
+
+            for (Integer zslice: range.getRangeZ()) {
+                if ((zslice<1) || (zslice>dimsIO[2])) {
+                    warning += "<font color=Red>WARNING: Slice "+zslice+" outside valid range [1:"+dimsIO[2]+"]</font><br>";
+                    break;
+                }
+            }
+
+            for (Integer frame: range.getRangeT()) {
+                if ((frame<1) || (frame>dimsIO[4])) {
+                    warning += "<font color=Red>WARNING: Frame "+frame+" outside valid range [1:"+dimsIO[4]+"]</font><br>";
+                    break;
+                }
+            }
+
             String oriSize = "<strong>Original Size</strong>: W: " + oriWellsNumber + ", F:" + oriFieldsNumber + ", X:" + dimsIO[0] + ", Y:" + dimsIO[1] + ", Z:" + dimsIO[2] + ", C:" + dimsIO[3] + ", T:" + dimsIO[4];
             String exportSize = "<strong>Exported Size</strong>: W: " + selected_wells.size() + ", F:" + selected_fields.size() + ", X:" + dimsIO[5] + ", Y:" + dimsIO[6] + ", Z:" + dimsIO[7] + ", C:" + dimsIO[8] + ", T:" + dimsIO[9];
 
-            task_summary = getMessage(bytes[0], bytes[1], opm.getPlateName(), oriSize, exportSize);
+            task_summary = getMessage(bytes[0], bytes[1], opm.getPlateName(), oriSize, exportSize, warning);
 
         } catch (Exception e) {
             task_summary = "Error " + e.getMessage();
@@ -406,6 +453,12 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
      * Run the processing after pressing on the "Process" button
      */
     public void doProcess() {
+        if(this.save_as_ome_tiff && !this.fuse_mode.fuse_fields){
+            IJ.log( "WARNING: Saving as OME-TIFF + companion is only" +
+                    " supported with a fusing option.\nPlease select a fusing fields method.");
+            return;
+        }
+
         HyperRange range = new HyperRange.Builder()
                 .setRangeC(this.selected_channels_str)
                 .setRangeZ(this.selected_slices_str)
@@ -420,6 +473,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
                 .useAveraging(use_averaging)
                 .setProjectionMethod(this.z_projection_method)
                 .setSaveFolder(this.save_directory)
+                .saveAsOMETIFF(this.save_as_ome_tiff)
                 .setNormalization(norm_min, norm_max)
                 .coordinatesCorrectionFactor(correctionFactor)
                 .build();
