@@ -1,15 +1,11 @@
 [![](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml/badge.svg)](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml)
 
-PerkinElmer Operetta Importer Command and API
+PerkinElmer/Revvity Operetta Importer Command and API
 ======================================
-
-This is an improved version of the original Operetta Importer Script we had written in Groovy a couple of years ago.
 
 ## Features
 
-Its is now a clear(ish) API and a nice SciJava `InteractiveCommand`
-
-We are looking for people to test it, so feel free to drop @lacan a line!
+This repo has a clear(ish) API and a nice SciJava `InteractiveCommand`
 
 ## Documentation
 
@@ -26,9 +22,6 @@ Go to `Help > Update...`
 Click `Manage Update Sites`
 
 Activate the `PTBIOP` update site.
-
-***WARNING: This update site override the Grid / Collection stitching plugin.*** [This is because a bug is not resolved for XY+T datasets](https://github.com/fiji/Stitching/issues/47)
-
 
 ## Usage
 
