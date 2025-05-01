@@ -182,7 +182,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     @Parameter
     Context ctx;
 
-    private String getMessage(long bytes_in, long bytes_out, String name, String oriSize, String exportSize, String warningOMETiff) {
+    private String getMessage(long bytes_in, long bytes_out, String name, String oriSize, String exportSize, String warning) {
         DecimalFormat df = new DecimalFormat("#0.0");
 
         double gb_in = ((double) bytes_in) / (1024 * 1024 * 1024);
@@ -192,7 +192,7 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
 
         String message = "<html>"// Process task: <br/>"
-                + warningOMETiff + "<br/>"
+                + warning + "<br/>"
                 + oriSize + "<br/>"
                 + exportSize + "<br/>"
                 + "Operetta Dataset " + name + "<ul>";
@@ -309,13 +309,36 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
             long[] dimsIO = opm.getUtilities().getIODimensions();
 
-            String warningOmeTiff = "";
-            if(this.save_as_ome_tiff && !this.fuse_mode.fuse_fields)
-                warningOmeTiff = "<font color=Red>WARNING: <strong>Saving as OME-TIFF + companion</strong> is only <br> supported with a <strong>fusing</strong> option</font>";
+            String warning = "";
+            if(this.save_as_ome_tiff && !this.fuse_mode.fuse_fields) {
+                warning = "<font color=Red>WARNING: <strong>Saving as OME-TIFF + companion</strong> is only <br> supported with a <strong>fusing</strong> option</font>";
+            }
+
+            for (Integer channel: range.getRangeC()) {
+                if ((channel<1) || (channel>dimsIO[3])) {
+                    warning += "<font color=Red>WARNING: Channel "+channel+" outside valid range [1:"+dimsIO[3]+"]</font><br>";
+                    break;
+                }
+            }
+
+            for (Integer zslice: range.getRangeZ()) {
+                if ((zslice<1) || (zslice>dimsIO[2])) {
+                    warning += "<font color=Red>WARNING: Slice "+zslice+" outside valid range [1:"+dimsIO[2]+"]</font><br>";
+                    break;
+                }
+            }
+
+            for (Integer frame: range.getRangeT()) {
+                if ((frame<1) || (frame>dimsIO[4])) {
+                    warning += "<font color=Red>WARNING: Frame "+frame+" outside valid range [1:"+dimsIO[4]+"]</font><br>";
+                    break;
+                }
+            }
+
             String oriSize = "<strong>Original Size</strong>: W: " + oriWellsNumber + ", F:" + oriFieldsNumber + ", X:" + dimsIO[0] + ", Y:" + dimsIO[1] + ", Z:" + dimsIO[2] + ", C:" + dimsIO[3] + ", T:" + dimsIO[4];
             String exportSize = "<strong>Exported Size</strong>: W: " + selected_wells.size() + ", F:" + selected_fields.size() + ", X:" + dimsIO[5] + ", Y:" + dimsIO[6] + ", Z:" + dimsIO[7] + ", C:" + dimsIO[8] + ", T:" + dimsIO[9];
 
-            task_summary = getMessage(bytes[0], bytes[1], opm.getPlateName(), oriSize, exportSize, warningOmeTiff);
+            task_summary = getMessage(bytes[0], bytes[1], opm.getPlateName(), oriSize, exportSize, warning);
 
         } catch (Exception e) {
             task_summary = "Error " + e.getMessage();
