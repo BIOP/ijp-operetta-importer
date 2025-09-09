@@ -144,10 +144,10 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     @Parameter(label = "Use averaging when downsampling", callback = "updateMessage")
     boolean use_averaging = false;
 
-    @Parameter(label = "Fuse Fields", callback = "updateMessage", required = false)
+    @Parameter(label = "Fuse Fields", callback = "updateMessage", required = false, persist = false)
     private FUSE_MODE fuse_mode = FUSE_MODE.NONE;
 
-    @Parameter(label = "Flip images", callback = "updateMessage", required = false)
+    @Parameter(label = "Flip images", callback = "updateMessage", required = false, persist = false)
     private FLIP_MODE flip_mode = FLIP_MODE.NONE;
 
     @Parameter(label = "Perform projection", choices = {"No Projection", "Average Intensity", "Max Intensity", "Min Intensity", "Sum Slices", "Standard Deviation", "Median"}, callback = "updateMessage")
@@ -476,6 +476,10 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
                 .saveAsOMETIFF(this.save_as_ome_tiff)
                 .setNormalization(norm_min, norm_max)
                 .coordinatesCorrectionFactor(correctionFactor)
+                .fuseFields(fuse_mode.fuse_fields)
+                .useStitcher(fuse_mode.stitch_fields)
+                .flipHorizontal(flip_mode.flipH)
+                .flipVertical(flip_mode.flipV)
                 .build();
 
         // Get Wells and Fields
