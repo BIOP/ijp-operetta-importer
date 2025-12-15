@@ -1,7 +1,8 @@
-[![](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml/badge.svg)](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml)
-
 PerkinElmer/Revvity Operetta Importer Command and API
 ======================================
+
+[![](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml/badge.svg)](https://github.com/BIOP/ijp-operetta-importer/actions/workflows/build-main.yml)
+[![Maven Scijava Version](https://img.shields.io/github/v/tag/BIOP/ijp-operetta-importer?label=Version-[Maven%20Scijava])](https://maven.scijava.org/#browse/browse:releases:ch%2Fepfl%2Fbiop%2FOperetta_Importer)
 
 ## Features
 
