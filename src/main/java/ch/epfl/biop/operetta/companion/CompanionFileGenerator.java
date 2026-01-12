@@ -71,7 +71,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -124,15 +124,15 @@ public class CompanionFileGenerator {
     private static final String SCHEMA_LOCATION = "http://www.openmicroscopy.org/Schemas/OME/2010-06/ome.xsd";
 
     Plate finalPlate = null;
-    Map<String, PlateAcquisition> plateAcquisitionMap = new HashMap<>();
-    Map<String, Well> wellMap = new HashMap<>();
-    Map<String, Image> imageMap = new HashMap<>();
+    Map<String, PlateAcquisition> plateAcquisitionMap = new LinkedHashMap<>();
+    Map<String, Well> wellMap = new LinkedHashMap<>();
+    Map<String, Image> imageMap = new LinkedHashMap<>();
     Instrument instrument =null;
-    Map<String, String> imagePlateAcquisitionMap = new HashMap<>();
-    Map<String, String> imageWellMap = new HashMap<>();
-    Map<String, List<MapAnnotation>> imageKVPsMap = new HashMap<>();
-    Map<String, List<TagAnnotation>> imageTagsMap = new HashMap<>();
-    Map<String, List<String>> plateWellMap = new HashMap<>();
+    Map<String, String> imagePlateAcquisitionMap = new LinkedHashMap<>();
+    Map<String, String> imageWellMap = new LinkedHashMap<>();
+    Map<String, List<MapAnnotation>> imageKVPsMap = new LinkedHashMap<>();
+    Map<String, List<TagAnnotation>> imageTagsMap = new LinkedHashMap<>();
+    Map<String, List<String>> plateWellMap = new LinkedHashMap<>();
     int plateIndex = 0;
     int wellIndex = 0;
     int plateAcquisitionIndex = 0;
