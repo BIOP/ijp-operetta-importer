@@ -582,6 +582,15 @@ public class CompanionFromArchiveGenerator {
             metadata.setWellSampleIndex(new NonNegativeInteger(wellSampleIndex), 0, currentWellIndex, wellSampleIndex);
             metadata.setWellSampleImageRef("Image:" + imageIndex, 0, currentWellIndex, wellSampleIndex);
 
+            // Set WellSample position (required for OperettaManager.getWells() filtering)
+            if (fieldPositions != null) {
+                Position absPos = calculateAbsolutePosition(row, col, field);
+                Length posX = new Length(absPos.x / 1000.0, UNITS.METER);
+                Length posY = new Length(absPos.y / 1000.0, UNITS.METER);
+                metadata.setWellSamplePositionX(posX, 0, currentWellIndex, wellSampleIndex);
+                metadata.setWellSamplePositionY(posY, 0, currentWellIndex, wellSampleIndex);
+            }
+
             // Add TiffData and Plane elements
             List<ImageData> imageGroup = imageGroups.get(key);
             int tiffDataIndex = 0;

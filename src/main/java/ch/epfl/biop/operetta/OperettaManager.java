@@ -22,6 +22,7 @@
 package ch.epfl.biop.operetta;
 
 import ch.epfl.biop.kheops.command.KheopsExportImagePlusCommand;
+import ch.epfl.biop.ometiff.LazyOMETiffReader;
 import ch.epfl.biop.operetta.companion.CompanionFileGenerator;
 import ch.epfl.biop.operetta.companion.ImageCompanion;
 import ch.epfl.biop.operetta.companion.PlateCompanion;
@@ -37,6 +38,8 @@ import ij.plugin.ZProjector;
 import ij.process.*;
 import loci.formats.*;
 import loci.formats.in.MinimalTiffReader;
+import loci.formats.in.OMETiffReader;
+import loci.formats.in.OMEXMLReader;
 import loci.formats.meta.IMetadata;
 import mpicbg.models.InvertibleBoundable;
 import mpicbg.models.TranslationModel2D;
@@ -1599,7 +1602,12 @@ public class OperettaManager {
          */
         public static IFormatReader createReader(final String id) throws IOException, FormatException {
             log.debug("Getting new reader for " + id);
-            IFormatReader reader = new ImageReader();
+            ClassList<IFormatReader> readers =
+                    ImageReader.getDefaultReaderClasses();
+            readers.addClass(LazyOMETiffReader.class);
+            readers.removeClass(OMETiffReader.class);
+            readers.removeClass(OMEXMLReader.class);
+            IFormatReader reader = new ImageReader(readers);
             reader.setFlattenedResolutions(false); // For compatibility with bdv-playground
             Memoizer memo = new Memoizer(reader);
             IMetadata omeMetaIdxOmeXml = MetadataTools.createOMEXMLMetadata();
