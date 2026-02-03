@@ -36,8 +36,20 @@
 			<url>https://maven.scijava.org/content/groups/public</url>
 		</repository>
 	</repositories>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
-	<developers>
+    <developers>
 		<developer>
 			<id>oburri</id>
 			<name>Olivier Burri</name>
@@ -116,6 +128,9 @@
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 
 		<ijp-kheops.version>0.6.2</ijp-kheops.version>
+
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
 	</properties>
 
 	<dependencies>
