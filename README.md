@@ -26,6 +26,8 @@ Activate the `PTBIOP` update site.
 
 ## Usage
 
+### Standard Operetta Import
+
 Go under `Plugins -> BIOP -> Operetta importer -> Operetta importer` or type `Operetta importer` in the search bar.
 
 #### Select input folder
@@ -81,3 +83,47 @@ Go under `Plugins -> BIOP -> Operetta importer -> Operetta importer` or type `Op
 15. A message is written at the bottom of the UI to inform you on the size and time the analysis will take. Finally, you can click on `Process`.
 
 ![image](https://github.com/user-attachments/assets/c26bee7c-535b-4299-9652-06b54e2800a0)
+
+---
+
+### Operetta Archive Import (Harmony 4.9+)
+
+This plugin also supports importing data from Harmony Archive format, which stores images in a different structure with an SQLite database and UUID-named TIFF files.
+
+Go under `Plugins -> BIOP -> Operetta importer -> Operetta Archive Importer...`
+
+#### Expected Archive Structure
+
+The Harmony Archive has the following folder structure:
+```
+Harmony-Archive/
+├── XML/
+│   └── MEASUREMENT/
+│       └── <uuid>.xml          <- Select this file
+└── IMAGES/
+    └── <uuid>/
+        ├── IMAGES.sqlite
+        └── *.tiff files
+```
+
+#### Select the XML file
+
+- Navigate to and select the XML file located at `Harmony-Archive/XML/MEASUREMENT/<uuid>.xml`
+- The plugin will automatically derive the images folder from the XML file path
+
+The plugin will:
+1. Generate an OME-XML companion file (`.companion.ome.lazy`) from the archive metadata
+2. Open the companion file with Bio-Formats
+3. Launch the same interactive import dialog as the standard Operetta importer
+
+Once the companion file is generated, subsequent imports will reuse it (skipping regeneration).
+
+#### Processing Options
+
+After the archive is loaded, you will see the same interactive dialog as the standard Operetta importer, with all the same options for:
+- Well and field selection
+- Channel, slice, and timepoint selection
+- Downsampling and averaging
+- Field fusion and stitching
+- Z-projection
+- OME-TIFF export
