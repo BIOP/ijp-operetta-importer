@@ -46,28 +46,26 @@ public class OperettaArchiveImporter implements Command {
     @Parameter(visibility = ItemVisibility.MESSAGE)
     String message = "BIOP Operetta Archive Importer";
 
-    @Parameter(label = "Select the folder containing the images of your Operetta archive", style = "directory",
-            description = "The folder containing IMAGES.sqlite and the TIFF files")
-    File imagesFolder;
-
-    @Parameter(label = "Select the matching XML file for this archive", style = "open",
-            description = "The XML file from the Harmony archive (e.g., measurement.xml)")
+    @Parameter(label = "Select the XML file from your Operetta archive", style = "open",
+            description = "The XML file in Harmony-Archive/XML/MEASUREMENT/<uuid>.xml")
     File xmlFile;
-
-    @Parameter(label = "Flip Y coordinates", description = "Flip Y coordinates if images appear mirrored")
-    boolean flipY = false;
-
-    @Parameter(label = "Swap X/Y coordinates", description = "Swap X and Y coordinates if needed")
-    boolean swapXY = false;
 
     @Parameter
     CommandService cs;
 
     @Override
     public void run() {
-        // Validate inputs
+        // Validate XML file exists
         if (!xmlFile.exists()) {
             IJ.log("Error: XML file does not exist: " + xmlFile.getAbsolutePath());
+            return;
+        }
+
+        // Derive images folder from XML file path
+        // Expected structure: Harmony-Archive/XML/MEASUREMENT/<uuid>.xml
+        // Images folder: Harmony-Archive/IMAGES/<uuid>/
+        File imagesFolder = deriveImagesFolder(xmlFile);
+        if (imagesFolder == null) {
             return;
         }
 
@@ -99,8 +97,8 @@ public class OperettaArchiveImporter implements Command {
                     sqliteFile.getAbsolutePath(),
                     xmlFile.getAbsolutePath(),
                     tiffFile.getAbsolutePath(),
-                    flipY,
-                    swapXY,
+                    false,
+                    false,
                     ".lazy"
             );
 
@@ -174,5 +172,60 @@ public class OperettaArchiveImporter implements Command {
             return files[0];
         }
         return null;
+    }
+
+    /**
+     * Derives the images folder from the XML file path.
+     * Expected structure:
+     *   Harmony-Archive/XML/MEASUREMENT/<uuid>.xml
+     *   Harmony-Archive/IMAGES/<uuid>/
+     *
+     * @param xmlFile the selected XML file
+     * @return the images folder, or null if derivation fails
+     */
+    private File deriveImagesFolder(File xmlFile) {
+        // Get UUID from XML filename (remove .xml extension)
+        String xmlName = xmlFile.getName();
+        if (!xmlName.toLowerCase().endsWith(".xml")) {
+            IJ.log("Error: Selected file is not an XML file: " + xmlName);
+            return null;
+        }
+        String uuid = xmlName.substring(0, xmlName.length() - 4);
+
+        // Navigate up: <uuid>.xml -> MEASUREMENT -> XML -> Harmony-Archive
+        File measurementFolder = xmlFile.getParentFile();
+        if (measurementFolder == null) {
+            IJ.log("Error: Cannot find parent folder of XML file");
+            return null;
+        }
+
+        File xmlFolder = measurementFolder.getParentFile();
+        if (xmlFolder == null) {
+            IJ.log("Error: Cannot find XML folder");
+            return null;
+        }
+
+        File harmonyArchive = xmlFolder.getParentFile();
+        if (harmonyArchive == null) {
+            IJ.log("Error: Cannot find Harmony Archive root folder");
+            return null;
+        }
+
+        // Build path to images folder: Harmony-Archive/IMAGES/<uuid>/
+        File imagesRoot = new File(harmonyArchive, "IMAGES");
+        if (!imagesRoot.exists() || !imagesRoot.isDirectory()) {
+            IJ.log("Error: IMAGES folder not found at " + imagesRoot.getAbsolutePath());
+            return null;
+        }
+
+        File imagesFolder = new File(imagesRoot, uuid);
+        if (!imagesFolder.exists() || !imagesFolder.isDirectory()) {
+            IJ.log("Error: Images folder for dataset not found at " + imagesFolder.getAbsolutePath());
+            IJ.log("Expected folder name matching XML filename: " + uuid);
+            return null;
+        }
+
+        IJ.log("Derived images folder: " + imagesFolder.getAbsolutePath());
+        return imagesFolder;
     }
 }
