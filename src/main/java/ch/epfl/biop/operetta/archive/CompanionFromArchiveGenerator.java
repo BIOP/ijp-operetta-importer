@@ -377,6 +377,34 @@ public class CompanionFromArchiveGenerator {
         return new int[]{1, 1};
     }
 
+    /**
+     * Extracts the plate name from the XML file.
+     * Looks for the PlateName element in the Harmony V5 namespace.
+     *
+     * @param xmlPath path to the XML file
+     * @return the plate name, or null if not found
+     */
+    private String getPlateName(String xmlPath) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new File(xmlPath));
+
+            NodeList plateNameNodes = doc.getElementsByTagNameNS(
+                    "http://www.perkinelmer.com/PEHH/HarmonyV5", "PlateName");
+            if (plateNameNodes.getLength() > 0) {
+                String plateName = plateNameNodes.item(0).getTextContent();
+                if (plateName != null && !plateName.trim().isEmpty()) {
+                    return plateName.trim();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Warning: Could not extract PlateName from XML: " + e.getMessage());
+        }
+        return null;
+    }
+
     private double getPixelSizeFromTiff(String tiffPathToUse) throws Exception {
         // tiffPathToUse is already in an isolated temp folder, so Bio-Formats won't group other files
         ImageReader reader = new ImageReader();
@@ -443,13 +471,23 @@ public class CompanionFromArchiveGenerator {
         Connection conn = DriverManager.getConnection("jdbc:sqlite:" + sqlitePathToUse);
         Statement stmt = conn.createStatement();
 
-        // Get plate name
-        ResultSet rs = stmt.executeQuery("SELECT Value FROM Config WHERE Name='Measurement'");
-        String plateName = rs.getString(1);
-        rs.close();
+        // Get plate name - prefer XML PlateName, fallback to SQLite Measurement (UUID)
+        String plateName = null;
+        if (xmlPath != null) {
+            plateName = getPlateName(xmlPath);
+            if (plateName != null) {
+                System.out.println("Using plate name from XML: " + plateName);
+            }
+        }
+        if (plateName == null) {
+            ResultSet rsConfig = stmt.executeQuery("SELECT Value FROM Config WHERE Name='Measurement'");
+            plateName = rsConfig.getString(1);
+            rsConfig.close();
+            System.out.println("Using plate name from SQLite (Measurement ID): " + plateName);
+        }
 
         // Get all images
-        rs = stmt.executeQuery("SELECT * FROM Image");
+        ResultSet rs = stmt.executeQuery("SELECT * FROM Image");
 
         // Collect all data
         List<ImageData> imageDataList = new ArrayList<>();
