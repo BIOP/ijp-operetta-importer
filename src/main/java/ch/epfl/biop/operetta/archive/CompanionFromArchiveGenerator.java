@@ -575,11 +575,12 @@ public class CompanionFromArchiveGenerator {
                 metadata.setChannelSamplesPerPixel(new PositiveInteger(1), imageIndex, c);
             }
 
-            // Link well sample - use sequential index for each well
+            // Link well sample - use sequential index for each well for the API,
+            // but set WellSampleIndex to global imageIndex for OperettaManager compatibility
             int wellSampleIndex = wellSampleCountMap.getOrDefault(wellKey, 0);
             wellSampleCountMap.put(wellKey, wellSampleIndex + 1);
             metadata.setWellSampleID("WellSample:" + currentWellIndex + ":" + wellSampleIndex, 0, currentWellIndex, wellSampleIndex);
-            metadata.setWellSampleIndex(new NonNegativeInteger(wellSampleIndex), 0, currentWellIndex, wellSampleIndex);
+            metadata.setWellSampleIndex(new NonNegativeInteger(imageIndex), 0, currentWellIndex, wellSampleIndex); // Use global imageIndex
             metadata.setWellSampleImageRef("Image:" + imageIndex, 0, currentWellIndex, wellSampleIndex);
 
             // Set WellSample position (required for OperettaManager.getWells() filtering)
