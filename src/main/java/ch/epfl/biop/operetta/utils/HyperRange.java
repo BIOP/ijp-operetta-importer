@@ -28,6 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -37,13 +39,15 @@ import java.util.stream.IntStream;
 public class HyperRange {
 
     private static final Logger logger = LoggerFactory.getLogger(HyperRange.class);
+    private final Pattern czt_pattern = Pattern.compile(".*p(\\d*)-ch(\\d*)sk(\\d*)fk(\\d*).*");
+    private final Pattern czt_pattern_archive = Pattern.compile(".*f(\\d*)p(\\d*)-ch(\\d*)t(\\d*).*");
 
     private List<Integer> range_c;
     private List<Integer> range_z;
     private List<Integer> range_t;
     private ImagePlus imp;
 
-    // Lookup map from filename to CZT indices (built from metadata)
+    // Fallback lookup map from filename to CZT indices (built from metadata, used for UUID filenames)
     private Map<String, int[]> filenameToCZT = null;
 
     /**
@@ -136,7 +140,8 @@ public class HyperRange {
     }
 
     /**
-     * Set a lookup map from filename to CZT indices (built from metadata).
+     * Set a fallback lookup map from filename to CZT indices (built from metadata).
+     * Used for files that don't match standard filename patterns (e.g., archive UUID filenames).
      * @param map Map from filename to int[]{c, z, t} (1-based indices)
      */
     public void setFilenameToCZTMap(Map<String, int[]> map) {
@@ -144,9 +149,9 @@ public class HyperRange {
     }
 
     /**
-     * Look up CZT from the filename map. Tries exact match first, then matches by filename only.
+     * Look up CZT from the fallback filename map. Tries exact match first, then matches by filename only.
      */
-    private int[] lookupCZT(String s) {
+    private int[] lookupCZTFromMap(String s) {
         if (filenameToCZT == null) return null;
 
         // Try exact match first
@@ -172,10 +177,30 @@ public class HyperRange {
      * @return true if the image name is included in the range
      */
     public boolean includes(String s) {
-        int[] czt = lookupCZT(s);
+        // Try standard Operetta pattern first
+        Matcher m = czt_pattern.matcher(s);
+        if (m.find()) {
+            int c = Integer.parseInt(m.group(2));
+            int z = Integer.parseInt(m.group(1));
+            int t = Integer.parseInt(m.group(3));
+            return range_c.contains(c) && range_z.contains(z) && range_t.contains(t);
+        }
+
+        // Try archive pattern
+        m = czt_pattern_archive.matcher(s);
+        if (m.find()) {
+            int c = Integer.parseInt(m.group(3));
+            int z = Integer.parseInt(m.group(2));
+            int t = Integer.parseInt(m.group(4));
+            return range_c.contains(c) && range_z.contains(z) && range_t.contains(t);
+        }
+
+        // Fallback to lookup map for UUID filenames
+        int[] czt = lookupCZTFromMap(s);
         if (czt != null) {
             return range_c.contains(czt[0]) && range_z.contains(czt[1]) && range_t.contains(czt[2]);
         }
+
         logger.warn("Could not find CZT for file: {}", s);
         return false;
     }
@@ -188,7 +213,40 @@ public class HyperRange {
     public Map<String, Integer> getIndexes(String s) {
         Map<String, Integer> indexes = new HashMap<>();
 
-        int[] czt = lookupCZT(s);
+        // Try standard Operetta pattern first
+        Matcher m = czt_pattern.matcher(s);
+        if (m.find()) {
+            int c = Integer.parseInt(m.group(2));
+            int z = Integer.parseInt(m.group(1));
+            int t = Integer.parseInt(m.group(3));
+
+            indexes.put("C", c);
+            indexes.put("Z", z);
+            indexes.put("T", t);
+
+            int idx = imp.getStackIndex(range_c.indexOf(c) + 1, range_z.indexOf(z) + 1, range_t.indexOf(t) + 1);
+            indexes.put("I", idx);
+            return indexes;
+        }
+
+        // Try archive pattern
+        m = czt_pattern_archive.matcher(s);
+        if (m.find()) {
+            int c = Integer.parseInt(m.group(3));
+            int z = Integer.parseInt(m.group(2));
+            int t = Integer.parseInt(m.group(4));
+
+            indexes.put("C", c);
+            indexes.put("Z", z);
+            indexes.put("T", t);
+
+            int idx = imp.getStackIndex(range_c.indexOf(c) + 1, range_z.indexOf(z) + 1, range_t.indexOf(t) + 1);
+            indexes.put("I", idx);
+            return indexes;
+        }
+
+        // Fallback to lookup map for UUID filenames
+        int[] czt = lookupCZTFromMap(s);
         if (czt != null) {
             int c = czt[0];
             int z = czt[1];
