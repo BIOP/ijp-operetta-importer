@@ -28,8 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -39,14 +37,14 @@ import java.util.stream.IntStream;
 public class HyperRange {
 
     private static final Logger logger = LoggerFactory.getLogger(HyperRange.class);
-    private final Pattern czt_pattern = Pattern.compile(".*p(\\d*)-ch(\\d*)sk(\\d*)fk(\\d*).*");
-
-    private final Pattern czt_pattern_archive = Pattern.compile(".*f(\\d*)p(\\d*)-ch(\\d*)t(\\d*).*");
 
     private List<Integer> range_c;
     private List<Integer> range_z;
     private List<Integer> range_t;
     private ImagePlus imp;
+
+    // Lookup map from filename to CZT indices (built from metadata)
+    private Map<String, int[]> filenameToCZT = null;
 
     /**
      * Constructor used internally
@@ -138,30 +136,47 @@ public class HyperRange {
     }
 
     /**
-     * check if the given image name is included in the range
+     * Set a lookup map from filename to CZT indices (built from metadata).
+     * @param map Map from filename to int[]{c, z, t} (1-based indices)
+     */
+    public void setFilenameToCZTMap(Map<String, int[]> map) {
+        this.filenameToCZT = map;
+    }
+
+    /**
+     * Look up CZT from the filename map. Tries exact match first, then matches by filename only.
+     */
+    private int[] lookupCZT(String s) {
+        if (filenameToCZT == null) return null;
+
+        // Try exact match first
+        if (filenameToCZT.containsKey(s)) {
+            return filenameToCZT.get(s);
+        }
+
+        // Try matching just the filename portion
+        String sFilename = new java.io.File(s).getName();
+        for (Map.Entry<String, int[]> entry : filenameToCZT.entrySet()) {
+            String entryFilename = new java.io.File(entry.getKey()).getName();
+            if (sFilename.equals(entryFilename)) {
+                return entry.getValue();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if the given image name is included in the range
      * @param s the image name
      * @return true if the image name is included in the range
      */
     public boolean includes(String s) {
-        Matcher m = czt_pattern.matcher(s);
-
-        if (m.find()) {
-            int c = Integer.parseInt(m.group(2));
-            int z = Integer.parseInt(m.group(1));
-            int t = Integer.parseInt(m.group(3));
-
-            return range_c.contains(c) && range_z.contains(z) && range_t.contains(t);
-        } else {
-            m = czt_pattern_archive.matcher(s);
-            if (m.find()) {
-                int c = Integer.parseInt(m.group(3));
-                int z = Integer.parseInt(m.group(2));
-                int t = Integer.parseInt(m.group(4));
-
-                return range_c.contains(c) && range_z.contains(z) && range_t.contains(t);
-            }
+        int[] czt = lookupCZT(s);
+        if (czt != null) {
+            return range_c.contains(czt[0]) && range_z.contains(czt[1]) && range_t.contains(czt[2]);
         }
-
+        logger.warn("Could not find CZT for file: {}", s);
         return false;
     }
 
@@ -171,49 +186,25 @@ public class HyperRange {
      * @return "C", "Z", "T" and "I" indexes
      */
     public Map<String, Integer> getIndexes(String s) {
-
         Map<String, Integer> indexes = new HashMap<>();
 
-        Matcher m = czt_pattern.matcher(s);
+        int[] czt = lookupCZT(s);
+        if (czt != null) {
+            int c = czt[0];
+            int z = czt[1];
+            int t = czt[2];
 
-        if (m.find()) {
-            int c = Integer.parseInt(m.group(2));
             indexes.put("C", c);
-
-            int z = Integer.parseInt(m.group(1));
             indexes.put("Z", z);
-
-            int t = Integer.parseInt(m.group(3));
             indexes.put("T", t);
-
-            // This is assuming we want an index that is continuous and starting from 1 but what if that's not the case?
-            //int idx = imp.getStackIndex(c, z, t);//int idx = imp.getStackIndex(c, z, t);
 
             int idx = imp.getStackIndex(range_c.indexOf(c) + 1, range_z.indexOf(z) + 1, range_t.indexOf(t) + 1);
             indexes.put("I", idx);
-
         } else {
-            m = czt_pattern_archive.matcher(s);
-            if (m.find()) {
-                int c = Integer.parseInt(m.group(3));
-                indexes.put("C", c);
-
-                int z = Integer.parseInt(m.group(2));
-                indexes.put("Z", z);
-
-                int t = Integer.parseInt(m.group(4));
-                indexes.put("T", t);
-
-                // This is assuming we want an index that is continuous and starting from 1 but what if that's not the case?
-                //int idx = imp.getStackIndex(c, z, t);//int idx = imp.getStackIndex(c, z, t);
-
-                int idx = imp.getStackIndex(range_c.indexOf(c) + 1, range_z.indexOf(z) + 1, range_t.indexOf(t) + 1);
-                indexes.put("I", idx);
-            }
+            logger.warn("Could not find CZT for file: {}", s);
         }
 
         return indexes;
-
     }
 
     /**

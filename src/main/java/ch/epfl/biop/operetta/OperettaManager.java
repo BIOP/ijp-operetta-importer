@@ -66,6 +66,7 @@ import ome.xml.model.Well;
 import ome.xml.model.WellSample;
 import ome.xml.model.enums.DimensionOrder;
 import ome.xml.model.enums.PixelType;
+import ome.xml.model.primitives.NonNegativeInteger;
 import ome.xml.model.primitives.Timestamp;
 import org.apache.commons.io.FilenameUtils;
 import org.perf4j.StopWatch;
@@ -635,6 +636,12 @@ public class OperettaManager {
         final HyperRange range2 = range.confirmRange(metadata);
         final int n = range2.getTotalPlanes();
 
+        // Build filename-to-CZT lookup map from metadata for archive files with UUID names
+        Map<String, int[]> filenameToCZT = buildFilenameToCZTMap(series_id);
+        if (!filenameToCZT.isEmpty()) {
+            range2.setFilenameToCZTMap(filenameToCZT);
+        }
+
         boolean do_norm = main_reader.getBitsPerPixel() != 16;
 
         // Get Stack width and height and modify in case there is a subregion
@@ -788,6 +795,55 @@ public class OperettaManager {
 
     public DimensionOrder getDimensionOrder(int fieldIndex){
         return ((OMEXMLMetadataRoot)metadata.getRoot()).getImage(fieldIndex).getPixels().getDimensionOrder();
+    }
+
+    /**
+     * Build a lookup map from filename to CZT indices from the metadata.
+     * This is used for archive files with UUID filenames that don't match standard patterns.
+     *
+     * @param imageIndex the image/series index
+     * @return Map from filename to int[]{c, z, t} (1-based indices)
+     */
+    private Map<String, int[]> buildFilenameToCZTMap(int imageIndex) {
+        Map<String, int[]> map = new HashMap<>();
+
+        try {
+            int tiffDataCount = metadata.getTiffDataCount(imageIndex);
+
+            for (int i = 0; i < tiffDataCount; i++) {
+                String filename = metadata.getUUIDFileName(imageIndex, i);
+                if (filename == null) continue;
+
+                // Get CZT indices (1-based to match HyperRange)
+                Integer c = null, z = null, t = null;
+
+                try {
+                    NonNegativeInteger firstC = metadata.getTiffDataFirstC(imageIndex, i);
+                    if (firstC != null) c = firstC.getValue()-1+1; // 1-based output
+                } catch (Exception ignored) {}
+
+                try {
+                    NonNegativeInteger firstZ = metadata.getTiffDataFirstZ(imageIndex, i);
+                    if (firstZ != null) z = firstZ.getValue()+1; // 1-based output
+                } catch (Exception ignored) {}
+
+                try {
+                    NonNegativeInteger firstT = metadata.getTiffDataFirstT(imageIndex, i);
+                    if (firstT != null) t = firstT.getValue()-1+1; // 1-based output
+                } catch (Exception ignored) {}
+
+                // Default to 1 if not specified
+                //if (c == null) c = 1;
+                //if (z == null) z = 1;
+                //if (t == null) t = 1;
+
+                map.put(filename, new int[]{c, z, t});
+            }
+        } catch (Exception e) {
+            log.debug("Could not build filename-to-CZT map from metadata: {}", e.getMessage());
+        }
+
+        return map;
     }
 
     /**
