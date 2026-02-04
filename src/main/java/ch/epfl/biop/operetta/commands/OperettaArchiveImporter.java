@@ -100,7 +100,8 @@ public class OperettaArchiveImporter implements Command {
                     xmlFile.getAbsolutePath(),
                     tiffFile.getAbsolutePath(),
                     flipY,
-                    swapXY
+                    swapXY,
+                    ".lazy"
             );
 
             generator.run();
@@ -116,7 +117,7 @@ public class OperettaArchiveImporter implements Command {
         }
 
         // Step 2: Open companion file with Bio-Formats (append .lazy for lazy loader)
-        String companionPathLazy = companionFile.getAbsolutePath() + ".lazy";
+        String companionPathLazy = companionFile.getAbsolutePath();
         IJ.log("Opening companion file with Bio-Formats: " + companionPathLazy);
         final IFormatReader[] reader = new IFormatReader[1];
 
@@ -168,7 +169,7 @@ public class OperettaArchiveImporter implements Command {
     }
 
     private File findCompanionFile(File folder) {
-        File[] files = folder.listFiles((dir, name) -> name.endsWith(".companion.ome"));
+        File[] files = folder.listFiles((dir, name) -> name.endsWith(".companion.ome.lazy"));
         if (files != null && files.length > 0) {
             return files[0];
         }

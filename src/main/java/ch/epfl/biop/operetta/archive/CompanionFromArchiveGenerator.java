@@ -58,6 +58,8 @@ public class CompanionFromArchiveGenerator {
     private int binningY = 1;
     private Double physicalPixelSizeUm = null;
 
+    String suffix = "";
+
     private static void printUsage() {
         System.out.println("Usage: java -jar harmony-ome-converter.jar <sqlite_path> [options]");
         System.out.println();
@@ -81,12 +83,14 @@ public class CompanionFromArchiveGenerator {
             String xmlPath,
             String tiffPath,
             boolean flipY,
-            boolean swapXY) {
+            boolean swapXY,
+            String suffixForCompanionFile) {
         this.swapXY = swapXY;
         this.flipY = flipY;
         this.tiffPath = tiffPath;
         this.xmlPath = xmlPath;
         this.sqlitePath = sqlitePath;
+        this.suffix = suffixForCompanionFile;
     }
 
     private void parseArguments(String[] args) {
@@ -230,7 +234,7 @@ public class CompanionFromArchiveGenerator {
             // Copy companion file back to original location
             File originalDir = new File(originalSqlitePath).getParentFile();
             File tempCompanionFile = new File(tempCompanionPath);
-            File finalCompanionFile = new File(originalDir, tempCompanionFile.getName());
+            File finalCompanionFile = new File(originalDir, tempCompanionFile.getName()+suffix);
             java.nio.file.Files.copy(tempCompanionFile.toPath(), finalCompanionFile.toPath(),
                     java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             System.out.println("Companion file written to: " + finalCompanionFile.getAbsolutePath());

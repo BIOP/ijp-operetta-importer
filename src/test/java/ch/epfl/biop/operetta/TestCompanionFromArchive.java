@@ -22,7 +22,7 @@ public class TestCompanionFromArchive {
         String tiffPath = foldersqlite+"00a614f9-eb33-469e-a565-b839d4049dc3.tiff";
 
         CompanionFromArchiveGenerator generator = new CompanionFromArchiveGenerator(
-                sqlitePath, xmlPath, tiffPath, flipY, swapXY);
+                sqlitePath, xmlPath, tiffPath, flipY, swapXY, ".lazy");
 
         generator.run();
 
