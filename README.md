@@ -55,6 +55,10 @@ Go under `Plugins -> BIOP -> Operetta importer -> Operetta importer` or type `Op
     - Do not fuse fields
     - Fuse with stage coordinates => put fields next ot the other without doing any blending
     - Fuse using Grid/Collection stitching => correctly stitch fields with affine transforms
+   
+9a. For Grid/Collection stitching ONLY, you can choose some settings to fine tune the stitching (compute overlap, regression threshold, relative & absolute displacement threshold).
+The definition of the settings can be found in the [plugin documentation page](https://imagej.net/plugins/image-stitching#gridcollection-stitching)
+
 10. Select a flipping option
     - Do not flip
     - Flip horizontal
@@ -70,7 +74,7 @@ Go under `Plugins -> BIOP -> Operetta importer -> Operetta importer` or type `Op
     - sum
 12. Select the min/max values of the intensities
 
-![image](https://github.com/user-attachments/assets/41c8e03b-8b49-4c8e-bfb9-7b16c58a9dd8)
+![image](https://github.com/user-attachments/assets/085d7e58-234e-4798-a7b5-75c081d6e396)
 
 
 #### Output and Saving
