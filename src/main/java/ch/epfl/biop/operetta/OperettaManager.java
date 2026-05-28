@@ -126,6 +126,10 @@ public class OperettaManager {
     private final TaskService taskService; // Task monitoring and cancellation
     private final boolean use_averaging;
     private final Context ctx;
+    private final double regressionThreshold;
+    private final double relativeDisplacementThreshold;
+    private final double absoluteDisplacementThreshold;
+    private final boolean computeOverlap;
 
     /**
      * List the types of valid XML files we should be looking for
@@ -181,6 +185,10 @@ public class OperettaManager {
                             boolean fuse_fields,
                             boolean use_stitcher,
                             boolean save_as_ome_tiff,
+                            double regressionThreshold,
+                            double relativeDisplacementThreshold,
+                            double absoluteDisplacementThreshold,
+                            boolean computeOverlap,
                             StitchingParameters stitching_parameters,
                             Context ctx) {
 
@@ -204,6 +212,10 @@ public class OperettaManager {
         this.use_stitcher = use_stitcher;
         this.save_as_ome_tiff = save_as_ome_tiff;
         this.stitching_parameters = stitching_parameters;
+        this.regressionThreshold = regressionThreshold;
+        this.relativeDisplacementThreshold = relativeDisplacementThreshold;
+        this.absoluteDisplacementThreshold = absoluteDisplacementThreshold;
+        this.computeOverlap = computeOverlap;
         this.px_size = metadata.getPixelsPhysicalSizeX(0);
         this.utils = new Utilities();
 
@@ -403,15 +415,15 @@ public class OperettaManager {
         });
         if (this.stitching_parameters == null) {
             stitching_parameters = new StitchingParameters();
-
             stitching_parameters.channel1 = 0;
             stitching_parameters.channel2 = 0;
             stitching_parameters.timeSelect = 0;
             stitching_parameters.checkPeaks = 5;
             stitching_parameters.fusionMethod = 0;
-            stitching_parameters.regThreshold = 0.3;
-            stitching_parameters.relativeThreshold = 2.5;
-            stitching_parameters.absoluteThreshold = 3.5;
+            stitching_parameters.regThreshold = this.regressionThreshold;
+            stitching_parameters.relativeThreshold = this.relativeDisplacementThreshold;
+            stitching_parameters.absoluteThreshold = this.absoluteDisplacementThreshold;
+            stitching_parameters.computeOverlap = this.computeOverlap;
             stitching_parameters.dimensionality = stitchingElements.get(0).getDimensionality();
         }
 
@@ -1386,6 +1398,10 @@ public class OperettaManager {
         private boolean save_as_ome_tiff = false;
         private StitchingParameters stitching_parameters = null;
         private boolean use_averaging = false;
+        private double regressionThreshold = 0.3;
+        private double relativeDisplacementThreshold = 2.5;
+        private double absoluteDisplacementThreshold = 3.5;
+        private boolean computeOverlap = false;
 
         private Context ctx = null;
 
@@ -1399,6 +1415,26 @@ public class OperettaManager {
         public Builder fuseFields(boolean is_fuse_fields) {
             this.is_fuse_fields = is_fuse_fields;
             if( !is_fuse_fields) this.is_use_stitcher = false;
+            return this;
+        }
+
+        public Builder setGridCollectionStitchingRegressionThreshold(double regressionThreshold) {
+            this.regressionThreshold = regressionThreshold;
+            return this;
+        }
+
+        public Builder setGridCollectionStitchingRelativeThreshold(double relativeThreshold) {
+            this.relativeDisplacementThreshold = relativeThreshold;
+            return this;
+        }
+
+        public Builder setGridCollectionStitchingAbsoluteThreshold(double absoluteThreshold) {
+            this.absoluteDisplacementThreshold = absoluteThreshold;
+            return this;
+        }
+
+        public Builder gridCollectionStitchingComputeOverlap(boolean computeOverlap){
+            this.computeOverlap = computeOverlap;
             return this;
         }
 
@@ -1644,6 +1680,10 @@ public class OperettaManager {
                         this.is_fuse_fields,
                         this.is_use_stitcher,
                         this.save_as_ome_tiff,
+                        this.regressionThreshold,
+                        this.relativeDisplacementThreshold,
+                        this.absoluteDisplacementThreshold,
+                        this.computeOverlap,
                         this.stitching_parameters,
                         this.ctx);
         }

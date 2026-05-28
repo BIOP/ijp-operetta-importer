@@ -34,6 +34,7 @@ import org.scijava.Initializable;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
 import org.scijava.command.InteractiveCommand;
+import org.scijava.module.MutableModuleItem;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.widget.Button;
@@ -42,6 +43,8 @@ import org.scijava.widget.FileWidget;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -134,7 +137,6 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
     @Parameter(label = "Select timepoints. Leave blank for all", callback = "updateMessage", required = false)
     private String selected_timepoints_str = "";
 
-
     @Parameter(label = "<html><b>Processing<b/><html>", visibility = ItemVisibility.MESSAGE, persist = false, style = "message", required = false)
     String processingMsg = "";
 
@@ -146,6 +148,9 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
     @Parameter(label = "Fuse Fields", callback = "updateMessage", required = false, persist = false)
     private FUSE_MODE fuse_mode = FUSE_MODE.NONE;
+
+    @Parameter(label = "Fusion Settings", callback = "GridCollectionStitchingSettingsUI", persist = false)
+    Button fusionSettings;
 
     @Parameter(label = "Flip images", callback = "updateMessage", required = false, persist = false)
     private FLIP_MODE flip_mode = FLIP_MODE.NONE;
@@ -161,7 +166,6 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
     @Parameter(label = "Max Value")
     Integer norm_max = (int) Math.pow(2, 16) - 1;
-
 
     @Parameter(label = "<html><b>Output and saving<b/><html>", visibility = ItemVisibility.MESSAGE, persist = false, style = "message", required = false)
     String outputMsg = "";
@@ -181,6 +185,122 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
     @Parameter
     Context ctx;
+
+    private double regressionThreshold = 0.3;
+    private double relativeDisplacementThreshold = 2.5;
+    private double absoluteDisplacementThreshold = 3.5;
+    private boolean computeOverlap = false;
+
+    private void GridCollectionStitchingSettingsUI(){
+
+        if (fuse_mode.equals(FUSE_MODE.STITCHING)) {
+
+            final Font stdFont = new Font("Calibri", Font.PLAIN, 17);
+
+            // Distance between two horizontal rings
+            JLabel labRegressionThreshold = new JLabel("Regression threshold");
+            labRegressionThreshold.setFont(stdFont);
+            SpinnerModel modelRegressionThreshold = new SpinnerNumberModel(regressionThreshold,0,10,0.01);
+            JSpinner spRegressionThreshold = new JSpinner(modelRegressionThreshold);
+            spRegressionThreshold.setFont(stdFont);
+
+            // Field of view
+            JLabel labMaxDispThreshold  = new JLabel("Max/avg displacement threshold");
+            labMaxDispThreshold.setFont(stdFont);
+            SpinnerModel spModelMaxDispThreshold = new SpinnerNumberModel(relativeDisplacementThreshold,0,100,0.01);
+            JSpinner spRelativeDispThreshold = new JSpinner(spModelMaxDispThreshold);
+            spRelativeDispThreshold.setFont(stdFont);
+
+            // Number of rings along one line
+            JLabel labAbsDispThreshold = new JLabel("Absolute displacement threshold");
+            labAbsDispThreshold.setFont(stdFont);
+            SpinnerModel spModelAbsDispThreshold = new SpinnerNumberModel(absoluteDisplacementThreshold,0,1000,0.01);
+            JSpinner spAbsDispThreshold = new JSpinner(spModelAbsDispThreshold);
+            spAbsDispThreshold.setFont(stdFont);
+
+            // checkbox to set the default argoSlide
+            JCheckBox chkComputeOverlap = new JCheckBox("Compute overlap");
+            chkComputeOverlap.setSelected(computeOverlap);
+            chkComputeOverlap.setFont(stdFont);
+
+            JButton showSettings = new JButton("Show definition");
+            String URL = "https://imagej.net/plugins/image-stitching#gridcollection-stitching";
+            showSettings.addActionListener( new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    try {
+                        java.awt.Desktop.getDesktop().browse(java.net.URI.create(URL));
+                    }
+                    catch (java.io.IOException e1) {
+                        IJ.log("Cannot open the URL "+URL+". "+e1.getMessage());
+                    }
+                }
+            });
+
+            // build everything together
+            GridBagConstraints constraints = new GridBagConstraints( );
+            constraints.fill = GridBagConstraints.BOTH;
+            constraints.insets = new Insets(5,5,5,5);
+            JPanel settingsPane = new JPanel();
+
+            int settingsRow = 0;
+            settingsPane.setLayout(new GridBagLayout());
+
+            constraints.gridx = 0;
+            constraints.gridy = settingsRow;
+            settingsPane.add(labRegressionThreshold, constraints);
+
+            constraints.gridx = 1;
+            constraints.gridy = settingsRow++;
+            settingsPane.add(spRegressionThreshold, constraints);
+
+            constraints.gridx = 0;
+            constraints.gridy = settingsRow;
+            settingsPane.add(labMaxDispThreshold, constraints);
+
+            constraints.gridx = 1;
+            constraints.gridy = settingsRow++;
+            settingsPane.add(spRelativeDispThreshold, constraints);
+
+            constraints.gridx = 0;
+            constraints.gridy = settingsRow;
+            settingsPane.add(labAbsDispThreshold, constraints);
+
+            constraints.gridx = 1;
+            constraints.gridy = settingsRow++;
+            settingsPane.add(spAbsDispThreshold, constraints);
+
+            constraints.gridx = 1;
+            constraints.gridy = settingsRow++;
+            settingsPane.add(chkComputeOverlap, constraints);
+
+            constraints.gridx = 1;
+            constraints.gridy = settingsRow;
+            settingsPane.add(showSettings, constraints);
+
+            JOptionPane pane = new JOptionPane(settingsPane, JOptionPane.PLAIN_MESSAGE, JOptionPane.OK_CANCEL_OPTION, null,
+                    null, null);
+            JDialog settingsDialog = pane.createDialog(null, "Setup Grid/Collection stitching settings");
+
+            pane.selectInitialValue();
+            settingsDialog.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+            settingsDialog.setVisible(true);
+            settingsDialog.dispose();
+
+            Object selectedValue = pane.getValue();
+            int opt = JOptionPane.CLOSED_OPTION;
+
+            if(selectedValue instanceof Integer)
+                opt = (Integer) selectedValue;
+
+            if(opt == JOptionPane.OK_OPTION){
+                regressionThreshold = (double)spRegressionThreshold.getModel().getValue();
+                relativeDisplacementThreshold = (double)spRelativeDispThreshold.getModel().getValue();
+                absoluteDisplacementThreshold = (double)spAbsDispThreshold.getModel().getValue();
+                computeOverlap = chkComputeOverlap.getModel().isSelected();
+                updateMessage();
+            }
+        }
+    }
 
     private String getMessage(long bytes_in, long bytes_out, String name, String oriSize, String exportSize, String warning) {
         DecimalFormat df = new DecimalFormat("#0.0");
@@ -239,6 +359,12 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
 
     private void updateMessage() {
         try {
+
+            // set the right button name according to the user's choice for fusing fields
+            final MutableModuleItem<Button> item = getInfo().getMutableInput("fusionSettings", Button.class);
+            item.setRequired(false);
+            item.setLabel(fuse_mode==FUSE_MODE.STITCHING ? "Fusion Settings" : "No settings");
+
             HyperRange range = new HyperRange.Builder()
                     .setRangeC(this.selected_channels_str)
                     .setRangeZ(this.selected_slices_str)
@@ -279,6 +405,10 @@ public class OperettaImporterInteractive extends InteractiveCommand implements I
                     .coordinatesCorrectionFactor(correctionFactor)
                     .fuseFields(fuse_mode.fuse_fields)
                     .useStitcher(fuse_mode.stitch_fields)
+                    .setGridCollectionStitchingAbsoluteThreshold(absoluteDisplacementThreshold)
+                    .setGridCollectionStitchingRelativeThreshold(relativeDisplacementThreshold)
+                    .setGridCollectionStitchingRegressionThreshold(regressionThreshold)
+                    .gridCollectionStitchingComputeOverlap(computeOverlap)
                     .setContext(ctx)
                     .build();
 
