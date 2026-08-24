@@ -127,11 +127,17 @@
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 
+		<!-- Some dependencies (ome:turbojpeg) have classes in the default package,
+		     which breaks the module path derivation of the maven-javadoc-plugin.
+		     Run javadoc in non-modular (pre-Java 9) mode instead. -->
+		<legacyMode>true</legacyMode>
+
 		<ijp-kheops.version>0.23.1</ijp-kheops.version>
 		<Stitching_.version>3.1.10</Stitching_.version>
 
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+		<!-- sc.fiji:Stitching_ 3.1.10 is compiled for Java 21, so the build must
+		     target 21 as well (the enforcer bytecode rule checks this). -->
+		<scijava.jvm.version>21</scijava.jvm.version>
 	</properties>
 
 	<dependencies>
