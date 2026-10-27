@@ -5,13 +5,13 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>43.0.0</version>
+		<version>45.1.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>ch.epfl.biop</groupId>
 	<artifactId>Operetta_Importer</artifactId>
-	<version>0.7.2-SNAPSHOT</version>
+	<version>0.23.1-SNAPSHOT</version>
 
 	<name>PerkinElmer Operetta Importer</name>
 	<description>Hold your horses</description>
@@ -127,10 +127,17 @@
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 
-		<ijp-kheops.version>0.6.2</ijp-kheops.version>
+		<!-- Some dependencies (ome:turbojpeg) have classes in the default package,
+		     which breaks the module path derivation of the maven-javadoc-plugin.
+		     Run javadoc in non-modular (pre-Java 9) mode instead. -->
+		<legacyMode>true</legacyMode>
 
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+		<ijp-kheops.version>0.23.1</ijp-kheops.version>
+		<Stitching_.version>3.1.10</Stitching_.version>
+
+		<!-- sc.fiji:Stitching_ 3.1.10 is compiled for Java 21, so the build must
+		     target 21 as well (the enforcer bytecode rule checks this). -->
+		<scijava.jvm.version>21</scijava.jvm.version>
 	</properties>
 
 	<dependencies>
@@ -160,7 +167,7 @@
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>Stitching_</artifactId>
-			<version>3.1.9</version>
+			<version>${Stitching_.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>ch.epfl.biop</groupId>

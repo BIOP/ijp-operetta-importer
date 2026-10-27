@@ -23,12 +23,10 @@ package ch.epfl.biop.operetta;
 
 import net.imagej.ImageJ;
 
-import java.time.Instant;
-
 /**
  * Test class for Operetta related bugs
  */
-public class TestBugOperetta {
+public class SimpleIJLaunch {
     /**
      * Test to check if the parsing of the Operetta XML is correct
      * @param args Not used
